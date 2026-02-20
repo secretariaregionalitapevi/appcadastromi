@@ -12,6 +12,7 @@ const dataFile = path.join(dataDir, "cadastros.ndjson");
 const PORT = Number(process.env.PORT || 3000);
 const WEBHOOK_CRIANCA = process.env.WEBHOOK_CRIANCA || "";
 const WEBHOOK_MONITOR = process.env.WEBHOOK_MONITOR || "";
+const WEBHOOK_CADASTRO = process.env.WEBHOOK_CADASTRO || "https://webhooks.rendamais.com.br/webhook/304a56e6-8f63-4b8c-9798-3e0a35f6be70-musicalizacao-infiantil";
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -67,13 +68,16 @@ async function saveSubmission(tipo, payload) {
 }
 
 async function forwardToWebhook(tipo, payload) {
-  const webhook = tipo === "crianca" ? WEBHOOK_CRIANCA : WEBHOOK_MONITOR;
+  const webhookByType = tipo === "crianca" ? WEBHOOK_CRIANCA : WEBHOOK_MONITOR;
+  const webhook = webhookByType || WEBHOOK_CADASTRO;
   if (!webhook) return { forwarded: false };
+
+  const webhookPayload = { ...payload, tipo };
 
   const response = await fetch(webhook, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(webhookPayload)
   });
 
   if (!response.ok) return { forwarded: false, webhookStatus: response.status };

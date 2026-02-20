@@ -1,0 +1,301 @@
+{
+  "name": "Cadastros Musicalizacao (Crianca/Monitor) -> Sheets (Corrigido)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "304a56e6-8f63-4b8c-9798-3e0a35f6be70-musicalizacao-infiantil",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -760,
+        0
+      ],
+      "id": "7c2944fe-37ce-4094-a14b-e62059539d40",
+      "name": "Webhook",
+      "webhookId": "304a56e6-8f63-4b8c-9798-3e0a35f6be70"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c95c95f6-58b9-4514-9730-0b9cb2f54bc1",
+                    "leftValue": "={{ ((($json.body || $json).tipo) || (($json.body || $json).nome_crianca ? 'crianca' : (($json.body || $json).nome_completo ? 'monitor' : ''))).toString().toLowerCase().trim() }}",
+                    "rightValue": "crianca",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Crianca"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a9f8d67f-40ff-4f6d-9f42-f646177551df",
+                    "leftValue": "={{ ((($json.body || $json).tipo) || (($json.body || $json).nome_crianca ? 'crianca' : (($json.body || $json).nome_completo ? 'monitor' : ''))).toString().toLowerCase().trim() }}",
+                    "rightValue": "monitor",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Monitores"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -520,
+        0
+      ],
+      "id": "1843c30a-dd3f-4eb2-a89c-f392b89991f6",
+      "name": "Switch Tipo"
+    },
+    {
+      "parameters": {
+        "jsCode": "function onlyDigits(v){return (v ?? '').toString().replace(/\\D+/g, '');}\nfunction yn(v){\n  const s = (v ?? '').toString().trim().toLowerCase();\n  if(['sim','s','yes','y','true','1'].includes(s)) return 'Sim';\n  if(['não','nao','n','no','false','0'].includes(s)) return 'Não';\n  return s === '' ? '' : v;\n}\nfunction normSexo(v){\n  const s = (v ?? '').toString().trim().toLowerCase();\n  if(['menino','m','masc','masculino'].includes(s)) return 'Menino';\n  if(['menina','f','fem','feminino'].includes(s)) return 'Menina';\n  return v ?? '';\n}\nfunction parseBRDate(d){\n  const s = (d ?? '').toString().trim();\n  const m = s.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);\n  if(!m) return { iso: '', ok: false };\n  const iso = `${m[3]}-${m[2]}-${m[1]}`;\n  const dt = new Date(iso + 'T00:00:00');\n  if(Number.isNaN(dt.getTime())) return { iso: '', ok: false };\n  return { iso, ok: true };\n}\nfunction calcAge(iso){\n  if(!iso) return '';\n  const dob = new Date(iso + 'T00:00:00');\n  const now = new Date();\n  let age = now.getFullYear() - dob.getFullYear();\n  const m = now.getMonth() - dob.getMonth();\n  if(m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;\n  return age;\n}\n\nconst body = items[0].json.body ?? items[0].json;\nconst dob = parseBRDate(body.data_nascimento);\nconst idadeCalc = calcAge(dob.iso);\nconst idade = body.idade !== undefined && body.idade !== null && body.idade !== '' ? body.idade : idadeCalc;\n\nconst out = {\n  created_at: new Date().toISOString(),\n  tipo: 'crianca',\n  nome_crianca: body.nome_crianca ?? '',\n  sexo: normSexo(body.sexo),\n  data_nascimento: body.data_nascimento ?? '',\n  data_nascimento_iso: dob.iso,\n  idade: idade,\n  comum_congregacao: body.comum_congregacao ?? '',\n  nome_pai: body.nome_pai ?? '',\n  pai_e_crente: yn(body.pai_e_crente),\n  nome_mae: body.nome_mae ?? '',\n  mae_e_crente: yn(body.mae_e_crente),\n  pais_vivem_juntos: yn(body.pais_vivem_juntos),\n  crianca_vive_com_os_pais: yn(body.crianca_vive_com_os_pais),\n  se_nao_vive_com_pais_com_quem_vive: body.se_nao_vive_com_pais_com_quem_vive ?? '',\n  nome_responsavel: body.nome_responsavel ?? '',\n  celular_responsavel: onlyDigits(body.celular_responsavel),\n  tem_whatsapp: yn(body.tem_whatsapp),\n  participa_reunioes_jovens_menores: yn(body.participa_reunioes_jovens_menores),\n  participa_espaco_infantil: yn(body.participa_espaco_infantil),\n  logradouro_numero: body.logradouro_numero ?? '',\n  complemento: body.complemento ?? '',\n  bairro: body.bairro ?? '',\n  cidade: body.cidade ?? '',\n  cep: onlyDigits(body.cep),\n  dificuldade_aprendizagem: yn(body.dificuldade_aprendizagem),\n  dificuldade_descricao: body.dificuldade_descricao ?? '',\n  faz_terapia: yn(body.faz_terapia),\n  terapia_especialidade: body.terapia_especialidade ?? ''\n};\n\nreturn [{ json: out }];"
+      },
+      "id": "119a7ea4-745b-4fd7-a87e-d1aeb5d00541",
+      "name": "Normalizar Crianca",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function onlyDigits(v){return (v ?? '').toString().replace(/\\D+/g, '');}\nfunction yn(v){\n  const s = (v ?? '').toString().trim().toLowerCase();\n  if(['sim','s','yes','y','true','1'].includes(s)) return 'Sim';\n  if(['não','nao','n','no','false','0'].includes(s)) return 'Não';\n  return s === '' ? '' : v;\n}\n\nconst body = items[0].json.body ?? items[0].json;\n\nconst out = {\n  created_at: new Date().toISOString(),\n  tipo: 'monitor',\n  nome_completo: body.nome_completo ?? '',\n  comum_congregacao: body.comum_congregacao ?? '',\n  idade: body.idade ?? '',\n  batizado: yn(body.batizado),\n  data_batismo: body.data_batismo ?? '',\n  celular: onlyDigits(body.celular),\n  email: body.email ?? '',\n  polo_auxilio: body.polo_auxilio ?? '',\n  musico_ou_musicista: yn(body.musico_ou_musicista),\n  oficializado: yn(body.oficializado),\n  data_oficializacao: body.data_oficializacao ?? '',\n  instrutor_atualmente: yn(body.instrutor_atualmente),\n  instrutor_em_qual_igreja: body.instrutor_em_qual_igreja ?? '',\n  formacao_musica: yn(body.formacao_musica),\n  formacao_qual: body.formacao_qual ?? '',\n  formacao_data: body.formacao_data ?? '',\n  pedagogo: yn(body.pedagogo),\n  pedagogo_desde: body.pedagogo_desde ?? '',\n  atua_na_area: yn(body.atua_na_area),\n  afinidade_criancas: yn(body.afinidade_criancas),\n  cursos_conhecimentos: body.cursos_conhecimentos ?? '',\n  de_acordo_voluntario: yn(body.de_acordo_voluntario),\n  autoriza_tratamento_dados: yn(body.autoriza_tratamento_dados)\n};\n\nreturn [{ json: out }];"
+      },
+      "id": "d3a09aa0-af34-44c1-8c37-54743c3ab762",
+      "name": "Normalizar Monitor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": "COLE_AQUI_O_SPREADSHEET_ID",
+        "sheetName": "Crianca",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "created_at": "={{ $json.created_at }}",
+            "tipo": "={{ $json.tipo }}",
+            "nome_crianca": "={{ $json.nome_crianca }}",
+            "sexo": "={{ $json.sexo }}",
+            "data_nascimento": "={{ $json.data_nascimento }}",
+            "data_nascimento_iso": "={{ $json.data_nascimento_iso }}",
+            "idade": "={{ $json.idade }}",
+            "comum_congregacao": "={{ $json.comum_congregacao }}",
+            "nome_pai": "={{ $json.nome_pai }}",
+            "pai_e_crente": "={{ $json.pai_e_crente }}",
+            "nome_mae": "={{ $json.nome_mae }}",
+            "mae_e_crente": "={{ $json.mae_e_crente }}",
+            "pais_vivem_juntos": "={{ $json.pais_vivem_juntos }}",
+            "crianca_vive_com_os_pais": "={{ $json.crianca_vive_com_os_pais }}",
+            "se_nao_vive_com_pais_com_quem_vive": "={{ $json.se_nao_vive_com_pais_com_quem_vive }}",
+            "nome_responsavel": "={{ $json.nome_responsavel }}",
+            "celular_responsavel": "={{ $json.celular_responsavel }}",
+            "tem_whatsapp": "={{ $json.tem_whatsapp }}",
+            "participa_reunioes_jovens_menores": "={{ $json.participa_reunioes_jovens_menores }}",
+            "participa_espaco_infantil": "={{ $json.participa_espaco_infantil }}",
+            "logradouro_numero": "={{ $json.logradouro_numero }}",
+            "complemento": "={{ $json.complemento }}",
+            "bairro": "={{ $json.bairro }}",
+            "cidade": "={{ $json.cidade }}",
+            "cep": "={{ $json.cep }}",
+            "dificuldade_aprendizagem": "={{ $json.dificuldade_aprendizagem }}",
+            "dificuldade_descricao": "={{ $json.dificuldade_descricao }}",
+            "faz_terapia": "={{ $json.faz_terapia }}",
+            "terapia_especialidade": "={{ $json.terapia_especialidade }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "b55a7f62-b85b-4c96-9e76-5e88bd1a14d1",
+      "name": "Google Sheets Crianca (Append Row)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        80,
+        -140
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DmyshV2xAIHWmWOH",
+          "name": "Google Sheets SEC"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": "COLE_AQUI_O_SPREADSHEET_ID",
+        "sheetName": "Monitores",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "created_at": "={{ $json.created_at }}",
+            "tipo": "={{ $json.tipo }}",
+            "nome_completo": "={{ $json.nome_completo }}",
+            "comum_congregacao": "={{ $json.comum_congregacao }}",
+            "idade": "={{ $json.idade }}",
+            "batizado": "={{ $json.batizado }}",
+            "data_batismo": "={{ $json.data_batismo }}",
+            "celular": "={{ $json.celular }}",
+            "email": "={{ $json.email }}",
+            "polo_auxilio": "={{ $json.polo_auxilio }}",
+            "musico_ou_musicista": "={{ $json.musico_ou_musicista }}",
+            "oficializado": "={{ $json.oficializado }}",
+            "data_oficializacao": "={{ $json.data_oficializacao }}",
+            "instrutor_atualmente": "={{ $json.instrutor_atualmente }}",
+            "instrutor_em_qual_igreja": "={{ $json.instrutor_em_qual_igreja }}",
+            "formacao_musica": "={{ $json.formacao_musica }}",
+            "formacao_qual": "={{ $json.formacao_qual }}",
+            "formacao_data": "={{ $json.formacao_data }}",
+            "pedagogo": "={{ $json.pedagogo }}",
+            "pedagogo_desde": "={{ $json.pedagogo_desde }}",
+            "atua_na_area": "={{ $json.atua_na_area }}",
+            "afinidade_criancas": "={{ $json.afinidade_criancas }}",
+            "cursos_conhecimentos": "={{ $json.cursos_conhecimentos }}",
+            "de_acordo_voluntario": "={{ $json.de_acordo_voluntario }}",
+            "autoriza_tratamento_dados": "={{ $json.autoriza_tratamento_dados }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "2a9ca6d0-b142-4a2d-b9e8-bd2f4dd0ad28",
+      "name": "Google Sheets Monitores (Append Row)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        80,
+        160
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DmyshV2xAIHWmWOH",
+          "name": "Google Sheets SEC"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch Tipo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Tipo": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Crianca",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalizar Monitor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Crianca": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Crianca (Append Row)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Monitor": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Monitores (Append Row)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets Crianca (Append Row)": {
+      "main": [
+        []
+      ]
+    },
+    "Google Sheets Monitores (Append Row)": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f3a2b7d3-0a3f-4ab6-920b-2e2f0ce667dd",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
