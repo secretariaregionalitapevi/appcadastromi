@@ -491,7 +491,10 @@ button:disabled {
   }
 
   legend {
-    font-size: 22px;
+    font-size: 16px;
+    line-height: 1.2;
+    text-wrap: balance;
+    max-width: calc(100% - 8px);
   }
 
   .col-8,
