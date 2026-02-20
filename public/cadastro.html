@@ -1,0 +1,335 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cadastros - Musicalização Infantil</title>
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
+  <link rel="stylesheet" href="/styles/main.css?v=20260222" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="form-header">
+      <div class="header-brand">
+        <img src="/assets/logo-ccb.png" alt="Congregação Cristã no Brasil" class="logo-small" />
+        <div>
+          <h1 id="cadastroTitulo">Cadastros - Musicalização Infantil</h1>
+          <p id="cadastroSubtitulo">Escolha abaixo qual cadastro será realizado: <b>Criança</b> ou <b>Monitor</b>.</p>
+        </div>
+      </div>
+      <div class="picker" id="cadastroPicker">
+        <button class="tabbtn active" id="btnCrianca" type="button">Cadastro de Criança</button>
+        <button class="tabbtn" id="btnMonitor" type="button">Cadastro de Monitor</button>
+      </div>
+    </header>
+
+    <form id="formCrianca">
+      <fieldset>
+        <legend>Dados da Criança</legend>
+        <div class="grid">
+          <div class="col-6">
+            <label>Nome da criança *</label>
+            <input name="nome_crianca" required />
+          </div>
+          <div class="col-3">
+            <label>Sexo *</label>
+            <select name="sexo" required>
+              <option value="">Selecione</option>
+              <option>Menina</option>
+              <option>Menino</option>
+            </select>
+          </div>
+          <div class="col-3">
+            <label>Nascimento (dd/mm/aaaa) *</label>
+            <input name="data_nascimento" placeholder="ex.: 12/03/2018" required />
+          </div>
+          <div class="col-12">
+            <label>Comum congregação *</label>
+            <input name="comum_congregacao" class="comum-field" placeholder="Clique para pesquisar a comum..." autocomplete="off" required />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Dados dos Pais / Responsáveis</legend>
+        <div class="grid">
+          <div class="col-8">
+            <label>Nome do pai</label>
+            <input name="nome_pai" />
+          </div>
+          <div class="col-4">
+            <label>Pai é crente?</label>
+            <select name="pai_e_crente">
+              <option value="">Selecione</option><option>Sim</option><option>Não</option>
+            </select>
+          </div>
+
+          <div class="col-8">
+            <label>Nome da mãe</label>
+            <input name="nome_mae" />
+          </div>
+          <div class="col-4">
+            <label>Mãe é crente?</label>
+            <select name="mae_e_crente">
+              <option value="">Selecione</option><option>Sim</option><option>Não</option>
+            </select>
+          </div>
+
+          <div class="col-4">
+            <label>Os pais vivem juntos?</label>
+            <select name="pais_vivem_juntos">
+              <option value="">Selecione</option><option>Sim</option><option>Não</option>
+            </select>
+          </div>
+          <div class="col-4">
+            <label>A criança vive com os pais?</label>
+            <select name="crianca_vive_com_os_pais">
+              <option value="">Selecione</option><option>Sim</option><option>Não</option>
+            </select>
+          </div>
+          <div class="col-4">
+            <label>Se não, vive com quem?</label>
+            <input name="se_nao_vive_com_pais_com_quem_vive" />
+          </div>
+
+          <div class="col-6">
+            <label>Responsável pela inscrição *</label>
+            <input name="nome_responsavel" required />
+          </div>
+          <div class="col-3">
+            <label>Celular do responsável *</label>
+            <input name="celular_responsavel" placeholder="(11) 99999-9999" required />
+          </div>
+          <div class="col-3">
+            <label>Tem WhatsApp?</label>
+            <select name="tem_whatsapp">
+              <option value="">Selecione</option><option>Sim</option><option>Não</option>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Participação</legend>
+        <div class="grid">
+          <div class="col-6">
+            <label>Participa das reuniões (jovens e menores)?</label>
+            <select name="participa_reunioes_jovens_menores">
+              <option value="">Selecione</option><option>Sim</option><option>Não</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label>Participa do espaço infantil?</label>
+            <select name="participa_espaco_infantil">
+              <option value="">Selecione</option><option>Sim</option><option>Não</option>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Endereço</legend>
+        <div class="grid">
+          <div class="col-6">
+            <label>Rua / Número *</label>
+            <input name="logradouro_numero" required />
+          </div>
+          <div class="col-6">
+            <label>Complemento</label>
+            <input name="complemento" />
+          </div>
+          <div class="col-4">
+            <label>Bairro *</label>
+            <input name="bairro" required />
+          </div>
+          <div class="col-4">
+            <label>Cidade *</label>
+            <input name="cidade" required />
+          </div>
+          <div class="col-4">
+            <label>CEP *</label>
+            <input name="cep" placeholder="00000-000" required />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Observações</legend>
+        <div class="grid">
+          <div class="col-4">
+            <label>Dificuldade de aprendizagem?</label>
+            <select name="dificuldade_aprendizagem">
+              <option value="">Selecione</option><option>Sim</option><option>Não</option>
+            </select>
+          </div>
+          <div class="col-8">
+            <label>Se sim, descreva</label>
+            <input name="dificuldade_descricao" />
+          </div>
+
+          <div class="col-4">
+            <label>Faz terapia?</label>
+            <select name="faz_terapia">
+              <option value="">Selecione</option><option>Sim</option><option>Não</option>
+            </select>
+          </div>
+          <div class="col-8">
+            <label>Se sim, qual especialidade?</label>
+            <input name="terapia_especialidade" />
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="actions">
+        <button id="btnEnviarCrianca" type="submit">Enviar cadastro da Criança</button>
+        <div id="statusCrianca" class="status" aria-live="polite">Aguardando envio...</div>
+      </div>
+    </form>
+
+    <form id="formMonitor" class="hidden">
+      <fieldset>
+        <legend>Cadastro do Monitor</legend>
+        <div class="grid">
+          <div class="col-8">
+            <label>Nome completo *</label>
+            <input name="nome_completo" required />
+          </div>
+          <div class="col-4">
+            <label>Comum congregação *</label>
+            <input name="comum_congregacao" class="comum-field" placeholder="Clique para pesquisar a comum..." autocomplete="off" required />
+          </div>
+
+          <div class="col-3">
+            <label>Idade *</label>
+            <input name="idade" inputmode="numeric" required />
+          </div>
+          <div class="col-3">
+            <label>É batizado?</label>
+            <select name="batizado">
+              <option value="">Selecione</option><option>Sim</option><option>Não</option>
+            </select>
+          </div>
+          <div class="col-3">
+            <label>Data do batismo (dd/mm/aaaa)</label>
+            <input name="data_batismo" placeholder="__/__/____" />
+          </div>
+          <div class="col-3">
+            <label>Celular *</label>
+            <input name="celular" placeholder="(11) 99999-9999" required />
+          </div>
+
+          <div class="col-6">
+            <label>E-mail (para controle de acesso) *</label>
+            <input name="email" type="email" required />
+            <div class="hint">Esse e-mail é usado para controle de acesso ao material (Google Drive).</div>
+          </div>
+          <div class="col-6">
+            <label>Em qual polo vai auxiliar? *</label>
+            <input name="polo_auxilio" required />
+          </div>
+
+          <div class="col-4">
+            <label>É músico ou musicista?</label>
+            <select name="musico_ou_musicista">
+              <option value="">Selecione</option><option>Sim</option><option>Não</option>
+            </select>
+          </div>
+          <div class="col-4">
+            <label>É oficializado(a)?</label>
+            <select name="oficializado">
+              <option value="">Selecione</option><option>Sim</option><option>Não</option>
+            </select>
+          </div>
+          <div class="col-4">
+            <label>Data da oficialização (dd/mm/aaaa)</label>
+            <input name="data_oficializacao" placeholder="__/__/____" />
+          </div>
+
+          <div class="col-4">
+            <label>É instrutor(a) atualmente?</label>
+            <select name="instrutor_atualmente">
+              <option value="">Selecione</option><option>Sim</option><option>Não</option>
+            </select>
+          </div>
+          <div class="col-8">
+            <label>Se sim, em qual igreja?</label>
+            <input name="instrutor_em_qual_igreja" />
+          </div>
+
+          <div class="col-4">
+            <label>Tem formação acadêmica em música?</label>
+            <select name="formacao_musica">
+              <option value="">Selecione</option><option>Sim</option><option>Não</option>
+            </select>
+          </div>
+          <div class="col-4">
+            <label>Se sim, qual?</label>
+            <input name="formacao_qual" />
+          </div>
+          <div class="col-4">
+            <label>Data da formação</label>
+            <input name="formacao_data" placeholder="__/__/____" />
+          </div>
+
+          <div class="col-4">
+            <label>É pedagogo(a)?</label>
+            <select name="pedagogo">
+              <option value="">Selecione</option><option>Sim</option><option>Não</option>
+            </select>
+          </div>
+          <div class="col-4">
+            <label>Se sim, desde quando?</label>
+            <input name="pedagogo_desde" placeholder="__/__/____" />
+          </div>
+          <div class="col-4">
+            <label>Se sim, atua na área?</label>
+            <select name="atua_na_area">
+              <option value="">Selecione</option><option>Sim</option><option>Não</option>
+            </select>
+          </div>
+
+          <div class="col-4">
+            <label>Tem afinidade com crianças?</label>
+            <select name="afinidade_criancas">
+              <option value="">Selecione</option><option>Sim</option><option>Não</option>
+            </select>
+          </div>
+
+          <div class="col-12">
+            <label>Cursos / workshop / conhecimentos</label>
+            <textarea name="cursos_conhecimentos"></textarea>
+          </div>
+
+          <div class="col-6 check-item">
+            <label><input type="checkbox" name="de_acordo_voluntario" value="Sim" /> Declaro que atuarei voluntariamente</label>
+          </div>
+          <div class="col-6 check-item">
+            <label><input type="checkbox" name="autoriza_tratamento_dados" value="Sim" /> Autorizo o tratamento dos meus dados</label>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="actions">
+        <button id="btnEnviarMonitor" type="submit">Enviar cadastro do Monitor</button>
+        <div id="statusMonitor" class="status" aria-live="polite">Aguardando envio...</div>
+      </div>
+    </form>
+  </div>
+
+  <div id="comumModal" class="comum-modal hidden" role="dialog" aria-modal="true" aria-labelledby="comumModalTitle">
+    <div class="comum-modal__backdrop" data-close-comum-modal="true"></div>
+    <div class="comum-modal__panel">
+      <div class="comum-modal__header">
+        <h2 id="comumModalTitle">Selecionar comum</h2>
+        <button type="button" class="comum-modal__close" id="comumModalClose" aria-label="Fechar">X</button>
+      </div>
+      <input id="comumSearchInput" class="comum-modal__search" type="text" placeholder="Digite nome, código ou trecho (ex.: car)" autocomplete="off" />
+      <div id="comumHint" class="comum-modal__hint"></div>
+      <ul id="comumResults" class="comum-modal__results"></ul>
+    </div>
+  </div>
+
+  <script src="/scripts/comuns.js?v=20260222"></script>
+  <script src="/scripts/cadastro.js?v=20260220"></script>
+</body>
+</html>

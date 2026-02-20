@@ -1,0 +1,16 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 520" role="img" aria-labelledby="title">
+  <title id="title">Congregação Cristã no Brasil</title>
+  <rect width="960" height="520" fill="#0f4f77" rx="18"/>
+  <g fill="none" stroke="#ffffff" stroke-width="8" opacity="0.95">
+    <rect x="26" y="26" width="908" height="468" rx="18"/>
+    <path d="M300 88h360v68H300z"/>
+    <path d="M228 420c154 44 350 44 504 0"/>
+    <path d="M214 130v260M746 130v260"/>
+  </g>
+  <g fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" text-anchor="middle">
+    <text x="480" y="118" font-size="92" font-weight="700">CCB</text>
+    <text x="480" y="250" font-size="68" font-weight="700">CONGREGAÇÃO CRISTÃ</text>
+    <text x="480" y="332" font-size="70" font-weight="700">NO</text>
+    <text x="480" y="414" font-size="78" font-weight="700">BRASIL</text>
+  </g>
+</svg>
