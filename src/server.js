@@ -14,6 +14,11 @@ const PORT = Number(process.env.PORT || 3000);
 const WEBHOOK_CRIANCA = process.env.WEBHOOK_CRIANCA || "";
 const WEBHOOK_MONITOR = process.env.WEBHOOK_MONITOR || "";
 const WEBHOOK_CADASTRO = process.env.WEBHOOK_CADASTRO || "https://workflows.rendamais.com.br/webhook/304a56e6-8f63-4b8c-9798-3e0a35f6be70-musicalizacao-infiantil";
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://sqamxlhfazulrisiptud.supabase.co";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxYW14bGhmYXp1bHJpc2lwdHVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzM3NTg4NCwiZXhwIjoyMDgyOTUxODg0fQ.w92yMKGGh5-ewRq0q6Pdl8TstzGlx0sGms1FCRveDYc";
+const SUPABASE_TABLE_CADASTROS = process.env.SUPABASE_TABLE_CADASTROS || "";
+const SUPABASE_TABLE_CRIANCA = process.env.SUPABASE_TABLE_CRIANCA || "musicalizacao_criancas";
+const SUPABASE_TABLE_MONITOR = process.env.SUPABASE_TABLE_MONITOR || "musicalizacao_monitores";
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -84,6 +89,27 @@ function onlyDigits(value) {
   return String(value || "").replace(/\D/g, "");
 }
 
+function isEmailFieldName(fieldName) {
+  if (!fieldName) return false;
+  const normalized = String(fieldName).toLowerCase();
+  return normalized === "email" || normalized.endsWith("_email");
+}
+
+function toUppercaseDeep(value, fieldName = "") {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (isEmailFieldName(fieldName)) return trimmed;
+    return trimmed.toUpperCase();
+  }
+  if (Array.isArray(value)) return value.map((item) => toUppercaseDeep(item, fieldName));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entryValue]) => [key, toUppercaseDeep(entryValue, key)])
+    );
+  }
+  return value;
+}
+
 function normalizeDate(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -129,23 +155,56 @@ function namesLookSame(a, b) {
 }
 
 async function readSavedEntries() {
-  try {
-    const content = await fsp.readFile(dataFile, "utf-8");
-    return content
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => {
-        try {
-          return JSON.parse(line);
-        } catch {
-          return null;
-        }
-      })
-      .filter(Boolean);
-  } catch {
-    return [];
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return [];
+
+  const table = SUPABASE_TABLE_CADASTROS || "";
+  const endpoints = table
+    ? [{ table, select: "id,registro_uuid,tipo,payload,created_at" }]
+    : [
+        { table: SUPABASE_TABLE_CRIANCA, select: "*" },
+        { table: SUPABASE_TABLE_MONITOR, select: "*" }
+      ];
+
+  const allEntries = [];
+  for (const endpoint of endpoints) {
+    const url = new URL(`${SUPABASE_URL.replace(/\/$/, "")}/rest/v1/${endpoint.table}`);
+    url.searchParams.set("select", endpoint.select);
+    url.searchParams.set("limit", "1000");
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+      }
+    });
+
+    if (!response.ok) {
+      const bodyText = await response.text();
+      throw new Error(`supabase_duplicate_check_failed:${response.status}:${bodyText}`);
+    }
+
+    const rows = await response.json();
+    for (const row of rows) {
+      if (row && typeof row === "object" && row.payload && row.tipo) {
+        allEntries.push({
+          id: row.registro_uuid || row.id || "",
+          tipo: row.tipo,
+          payload: row.payload
+        });
+        continue;
+      }
+
+      const inferredType = endpoint.table === SUPABASE_TABLE_MONITOR ? "monitor" : "crianca";
+      allEntries.push({
+        id: row.registro_uuid || row.id || "",
+        tipo: inferredType,
+        payload: row
+      });
+    }
   }
+
+  return allEntries;
 }
 
 function detectDuplicate(tipo, payload, entries) {
@@ -308,7 +367,8 @@ async function handleRequest(req, res) {
 
     if (req.method === "POST" && (pathname === "/api/cadastros/crianca" || pathname === "/api/cadastros/monitor")) {
       const tipo = pathname.endsWith("crianca") ? "crianca" : "monitor";
-      const payload = await readJsonBody(req);
+      const rawPayload = await readJsonBody(req);
+      const payload = toUppercaseDeep(rawPayload);
       const missing = validateRequired(tipo, payload);
 
       if (missing.length > 0) {
@@ -348,6 +408,11 @@ async function handleRequest(req, res) {
   } catch (error) {
     if (error.message === "payload_too_large") {
       sendJson(res, 413, { error: "Payload excede 1MB." });
+      return;
+    }
+
+    if (typeof error.message === "string" && error.message.startsWith("supabase_duplicate_check_failed:")) {
+      sendJson(res, 502, { error: "Falha ao validar duplicidade no Supabase." });
       return;
     }
 
