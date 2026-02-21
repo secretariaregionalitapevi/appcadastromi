@@ -2,6 +2,7 @@
 const fs = require("fs");
 const fsp = require("fs/promises");
 const path = require("path");
+const crypto = require("crypto");
 const { URL } = require("url");
 
 const rootDir = path.resolve(__dirname, "..");
@@ -47,8 +48,10 @@ async function readJsonBody(req) {
 }
 
 async function saveSubmission(tipo, payload) {
+  const id = crypto.randomUUID();
   const entry = {
-    id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id,
+    uuid: id,
     tipo,
     createdAt: new Date().toISOString(),
     payload,
@@ -67,12 +70,154 @@ async function saveSubmission(tipo, payload) {
   return entry;
 }
 
-async function forwardToWebhook(tipo, payload) {
+function normalizeText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function onlyDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function normalizeDate(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const slash = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (slash) return `${slash[3]}-${slash[2]}-${slash[1]}`;
+
+  const dash = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dash) return raw;
+
+  return normalizeText(raw);
+}
+
+function nameTokens(value) {
+  const stopWords = new Set(["de", "da", "do", "dos", "das", "e"]);
+  return new Set(
+    normalizeText(value)
+      .split(" ")
+      .filter((token) => token && !stopWords.has(token))
+  );
+}
+
+function tokenSimilarity(a, b) {
+  const tokensA = nameTokens(a);
+  const tokensB = nameTokens(b);
+  if (tokensA.size === 0 || tokensB.size === 0) return 0;
+
+  let intersection = 0;
+  for (const token of tokensA) {
+    if (tokensB.has(token)) intersection += 1;
+  }
+
+  return intersection / Math.max(tokensA.size, tokensB.size);
+}
+
+function namesLookSame(a, b) {
+  const normalizedA = normalizeText(a);
+  const normalizedB = normalizeText(b);
+  if (!normalizedA || !normalizedB) return false;
+  if (normalizedA === normalizedB) return true;
+  if (normalizedA.includes(normalizedB) || normalizedB.includes(normalizedA)) return true;
+  return tokenSimilarity(normalizedA, normalizedB) >= 0.6;
+}
+
+async function readSavedEntries() {
+  try {
+    const content = await fsp.readFile(dataFile, "utf-8");
+    return content
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function detectDuplicate(tipo, payload, entries) {
+  const sameTypeEntries = entries.filter((entry) => entry.tipo === tipo);
+  const congregation = normalizeText(payload.comum_congregacao);
+
+  for (const entry of sameTypeEntries) {
+    const existing = entry.payload || {};
+    const existingCongregation = normalizeText(existing.comum_congregacao);
+
+    if (tipo === "monitor") {
+      const email = normalizeText(payload.email);
+      const existingEmail = normalizeText(existing.email);
+      const phone = onlyDigits(payload.celular);
+      const existingPhone = onlyDigits(existing.celular);
+      const sameName = namesLookSame(payload.nome_completo, existing.nome_completo);
+
+      if (email && existingEmail && email === existingEmail) {
+        return { duplicate: true, matchedId: entry.id, reason: "email" };
+      }
+
+      if (phone && existingPhone && phone === existingPhone) {
+        return { duplicate: true, matchedId: entry.id, reason: "celular" };
+      }
+
+      if (sameName && congregation && congregation === existingCongregation) {
+        return { duplicate: true, matchedId: entry.id, reason: "nome_e_comum" };
+      }
+    }
+
+    if (tipo === "crianca") {
+      const childNameMatch = namesLookSame(payload.nome_crianca, existing.nome_crianca);
+      const fatherNameMatch = namesLookSame(payload.nome_pai, existing.nome_pai);
+      const motherNameMatch = namesLookSame(payload.nome_mae, existing.nome_mae);
+      const guardianNameMatch = namesLookSame(payload.nome_responsavel, existing.nome_responsavel);
+      const birthDate = normalizeDate(payload.data_nascimento);
+      const existingBirthDate = normalizeDate(existing.data_nascimento);
+      const phone = onlyDigits(payload.celular_responsavel);
+      const existingPhone = onlyDigits(existing.celular_responsavel);
+
+      const sameCongregation = congregation && congregation === existingCongregation;
+      const samePhone = phone && existingPhone && phone === existingPhone;
+      const sameBirthDate = birthDate && existingBirthDate && birthDate === existingBirthDate;
+
+      if (samePhone && sameCongregation && (childNameMatch || guardianNameMatch || fatherNameMatch || motherNameMatch)) {
+        return { duplicate: true, matchedId: entry.id, reason: "telefone_comum_nome" };
+      }
+
+      if (sameBirthDate && sameCongregation && (childNameMatch || (fatherNameMatch && motherNameMatch))) {
+        return { duplicate: true, matchedId: entry.id, reason: "nascimento_comum_nome" };
+      }
+
+      if (sameCongregation && childNameMatch && guardianNameMatch) {
+        return { duplicate: true, matchedId: entry.id, reason: "nome_crianca_responsavel" };
+      }
+    }
+  }
+
+  return { duplicate: false };
+}
+
+async function forwardToWebhook(tipo, payload, metadata = {}) {
   const webhookByType = tipo === "crianca" ? WEBHOOK_CRIANCA : WEBHOOK_MONITOR;
   const webhook = webhookByType || WEBHOOK_CADASTRO;
   if (!webhook) return { forwarded: false };
 
-  const webhookPayload = { ...payload, tipo };
+  const webhookPayload = {
+    ...payload,
+    tipo,
+    registro_uuid: metadata.uuid || "",
+    created_at: metadata.createdAt || new Date().toISOString()
+  };
 
   const response = await fetch(webhook, {
     method: "POST",
@@ -171,12 +316,27 @@ async function handleRequest(req, res) {
         return;
       }
 
+      const existingEntries = await readSavedEntries();
+      const duplicateCheck = detectDuplicate(tipo, payload, existingEntries);
+      if (duplicateCheck.duplicate) {
+        sendJson(res, 409, {
+          error: "Cadastro duplicado detectado.",
+          duplicateOf: duplicateCheck.matchedId,
+          duplicateReason: duplicateCheck.reason
+        });
+        return;
+      }
+
       const saved = await saveSubmission(tipo, payload);
-      const webhookResult = await forwardToWebhook(tipo, payload);
+      const webhookResult = await forwardToWebhook(tipo, payload, {
+        uuid: saved.id,
+        createdAt: saved.createdAt
+      });
 
       sendJson(res, 201, {
         message: "Cadastro recebido com sucesso.",
         id: saved.id,
+        uuid: saved.uuid,
         createdAt: saved.createdAt,
         persistedLocally: saved.persistedLocally,
         ...webhookResult
