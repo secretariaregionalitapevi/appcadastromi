@@ -271,9 +271,13 @@ async function forwardToWebhook(tipo, payload, metadata = {}) {
   const webhook = webhookByType || WEBHOOK_CADASTRO;
   if (!webhook) return { forwarded: false };
 
+  const normalizedPayload = toUppercaseDeep(payload);
+  const webhookUuid = metadata.uuid || "";
   const webhookPayload = {
-    ...payload,
-    tipo,
+    ...normalizedPayload,
+    tipo: String(tipo || "").toUpperCase(),
+    tipo_original: tipo,
+    uuid: webhookUuid,
     registro_uuid: metadata.uuid || "",
     created_at: metadata.createdAt || new Date().toISOString()
   };
