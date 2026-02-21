@@ -223,6 +223,86 @@
           "name": "Google Sheets SEC"
         }
       }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://SEU-PROJETO.supabase.co/rest/v1/musicalizacao_criancas",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SEU_SUPABASE_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer SEU_SUPABASE_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({ created_at: $json.created_at, tipo: $json.tipo, nome_crianca: $json.nome_crianca, sexo: $json.sexo, data_nascimento: $json.data_nascimento, comum_congregacao: $json.comum_congregacao, nome_pai: $json.nome_pai, pai_e_crente: $json.pai_e_crente, nome_mae: $json.nome_mae, mae_e_crente: $json.mae_e_crente, pais_vivem_juntos: $json.pais_vivem_juntos, crianca_vive_com_os_pais: $json.crianca_vive_com_os_pais, se_nao_vive_com_pais_com_quem_vive: $json.se_nao_vive_com_pais_com_quem_vive, nome_responsavel: $json.nome_responsavel, celular_responsavel: $json.celular_responsavel, tem_whatsapp: $json.tem_whatsapp, participa_reunioes_jovens_menores: $json.participa_reunioes_jovens_menores, participa_espaco_infantil: $json.participa_espaco_infantil, logradouro_numero: $json.logradouro_numero, complemento: $json.complemento, bairro: $json.bairro, cidade: $json.cidade, cep: $json.cep, dificuldade_aprendizagem: $json.dificuldade_aprendizagem, dificuldade_descricao: $json.dificuldade_descricao, faz_terapia: $json.faz_terapia, terapia_especialidade: $json.terapia_especialidade }) }}",
+        "options": {}
+      },
+      "id": "6f27e4ad-0f74-44d0-b687-41e81de9a4a1",
+      "name": "Supabase Criancas (Insert)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        380,
+        -140
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://SEU-PROJETO.supabase.co/rest/v1/musicalizacao_monitores",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SEU_SUPABASE_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer SEU_SUPABASE_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({ created_at: $json.created_at, tipo: $json.tipo, nome_completo: $json.nome_completo, comum_congregacao: $json.comum_congregacao, idade: $json.idade, batizado: $json.batizado, data_batismo: $json.data_batismo, celular: $json.celular, email: $json.email, polo_auxilio: $json.polo_auxilio, musico_ou_musicista: $json.musico_ou_musicista, oficializado: $json.oficializado, data_oficializacao: $json.data_oficializacao, instrutor_atualmente: $json.instrutor_atualmente, instrutor_em_qual_igreja: $json.instrutor_em_qual_igreja, formacao_musica: $json.formacao_musica, formacao_qual: $json.formacao_qual, formacao_data: $json.formacao_data, pedagogo: $json.pedagogo, pedagogo_desde: $json.pedagogo_desde, atua_na_area: $json.atua_na_area, afinidade_criancas: $json.afinidade_criancas, cursos_conhecimentos: $json.cursos_conhecimentos, de_acordo_voluntario: $json.de_acordo_voluntario, autoriza_tratamento_dados: $json.autoriza_tratamento_dados }) }}",
+        "options": {}
+      },
+      "id": "98bf9a0f-cec4-49b8-a4ec-330cd5a7af55",
+      "name": "Supabase Monitores (Insert)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        380,
+        160
+      ],
+      "continueOnFail": true
     }
   ],
   "pinData": {},
@@ -280,10 +360,32 @@
     },
     "Google Sheets Crianca (Append Row)": {
       "main": [
-        []
+        [
+          {
+            "node": "Supabase Criancas (Insert)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Google Sheets Monitores (Append Row)": {
+      "main": [
+        [
+          {
+            "node": "Supabase Monitores (Insert)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Criancas (Insert)": {
+      "main": [
+        []
+      ]
+    },
+    "Supabase Monitores (Insert)": {
       "main": [
         []
       ]

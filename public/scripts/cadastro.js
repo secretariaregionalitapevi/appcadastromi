@@ -19,12 +19,6 @@
     window.history.replaceState({}, "", url);
   }
 
-  function setStatus(el, msg, type) {
-    el.textContent = msg;
-    el.classList.remove("ok", "err");
-    if (type) el.classList.add(type);
-  }
-
   function formToJSON(formEl) {
     const fd = new FormData(formEl);
     const obj = {};
@@ -46,30 +40,102 @@
     return obj;
   }
 
-  async function submitForm(formEl, endpoint, statusEl) {
-    setStatus(statusEl, "Enviando...");
+  async function showSuccessModal() {
+    if (!window.Swal) {
+      window.alert("Cadastro enviado com sucesso.");
+      return;
+    }
+
+    await window.Swal.fire({
+      title: "Cadastro enviado!",
+      text: "Dados enviados com sucesso.",
+      icon: "success",
+      confirmButtonText: "OK",
+      timer: 4000,
+      timerProgressBar: true
+    });
+  }
+
+  async function showErrorModal(message) {
+    if (!window.Swal) {
+      window.alert(message);
+      return;
+    }
+
+    await window.Swal.fire({
+      title: "Erro ao enviar",
+      text: message,
+      icon: "error",
+      confirmButtonText: "OK"
+    });
+  }
+
+  async function showDuplicateModal(duplicate) {
+    const nome = duplicate?.nome || "Cadastro";
+    const comum = duplicate?.comum || "Comum não informada";
+    const data = duplicate?.date || "--/--/----";
+    const hora = duplicate?.time || "--:--:--";
+
+    if (!window.Swal) {
+      return window.confirm(`${nome} já possui cadastro. Deseja cadastrar mesmo assim?`);
+    }
+
+    const html = `
+      <div style="text-align:left;max-width:340px;margin:0 auto;">
+        <p style="margin:0 0 8px;"><strong>${nome}</strong><br/>de <strong>${comum}</strong><br/>já possui cadastro!</p>
+        <p style="margin:0;color:#4b5563;">Data: ${data}<br/>Horário: ${hora}</p>
+      </div>
+    `;
+
+    const result = await window.Swal.fire({
+      title: "Cadastro Duplicado!",
+      html,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Cadastrar Mesmo Assim",
+      cancelButtonText: "Cancelar"
+    });
+
+    return result.isConfirmed;
+  }
+
+  async function submitForm(formEl, endpoint, btnEl, options = {}) {
+    const { allowDuplicate = false } = options;
+    btnEl.disabled = true;
     const payload = formToJSON(formEl);
+    const requestBody = allowDuplicate ? { ...payload, _allowDuplicate: true } : payload;
 
     try {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(requestBody)
       });
 
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
+        if (res.status === 409 && data?.duplicate) {
+          const proceed = await showDuplicateModal(data.duplicate);
+          if (proceed) {
+            await submitForm(formEl, endpoint, btnEl, { allowDuplicate: true });
+          }
+          return;
+        }
+
         const msg = data?.error ? `${data.error}` : `Erro ao enviar (${res.status}).`;
-        setStatus(statusEl, msg, "err");
+        await showErrorModal(msg);
         return;
       }
 
-      const webhookInfo = data.forwarded ? " Webhook recebido." : " Salvo localmente.";
-      setStatus(statusEl, "Cadastro enviado com sucesso." + webhookInfo, "ok");
+      await showSuccessModal();
       formEl.reset();
     } catch {
-      setStatus(statusEl, "Falha de conexão com o servidor.", "err");
+      await showErrorModal("Falha de conexão com o servidor.");
+    } finally {
+      btnEl.disabled = false;
     }
   }
 
@@ -78,20 +144,14 @@
 
   formCrianca.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const status = document.getElementById("statusCrianca");
     const btn = document.getElementById("btnEnviarCrianca");
-    btn.disabled = true;
-    await submitForm(formCrianca, "/api/cadastros/crianca", status);
-    btn.disabled = false;
+    await submitForm(formCrianca, "/api/cadastros/crianca", btn);
   });
 
   formMonitor.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const status = document.getElementById("statusMonitor");
     const btn = document.getElementById("btnEnviarMonitor");
-    btn.disabled = true;
-    await submitForm(formMonitor, "/api/cadastros/monitor", status);
-    btn.disabled = false;
+    await submitForm(formMonitor, "/api/cadastros/monitor", btn);
   });
 
   const searchTipo = new URLSearchParams(window.location.search).get("tipo");

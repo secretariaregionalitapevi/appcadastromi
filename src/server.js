@@ -12,7 +12,7 @@ const dataFile = path.join(dataDir, "cadastros.ndjson");
 const PORT = Number(process.env.PORT || 3000);
 const WEBHOOK_CRIANCA = process.env.WEBHOOK_CRIANCA || "";
 const WEBHOOK_MONITOR = process.env.WEBHOOK_MONITOR || "";
-const WEBHOOK_CADASTRO = process.env.WEBHOOK_CADASTRO || "https://webhooks.rendamais.com.br/webhook/304a56e6-8f63-4b8c-9798-3e0a35f6be70-musicalizacao-infiantil";
+const WEBHOOK_CADASTRO = process.env.WEBHOOK_CADASTRO || "https://workflows.rendamais.com.br/webhook-test/304a56e6-8f63-4b8c-9798-3e0a35f6be70-musicalizacao-infiantil";
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
