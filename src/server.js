@@ -515,6 +515,14 @@ async function handleRequest(req, res) {
         createdAt: saved.createdAt
       });
 
+      if (!webhookResult.forwarded) {
+        sendJson(res, 502, {
+          error: "Falha ao encaminhar cadastro para a integração.",
+          webhookStatus: webhookResult.webhookStatus || 0
+        });
+        return;
+      }
+
       sendJson(res, 201, {
         message: "Cadastro recebido com sucesso.",
         id: saved.id,

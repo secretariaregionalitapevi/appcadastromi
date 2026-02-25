@@ -187,6 +187,11 @@
         return;
       }
 
+      if (data?.forwarded === false) {
+        await showErrorModal("Falha ao encaminhar cadastro para a integração.");
+        return;
+      }
+
       await showSuccessModal();
       formEl.reset();
     } catch {
