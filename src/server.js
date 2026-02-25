@@ -35,7 +35,7 @@ if (fs.existsSync(envFile)) {
 const PORT = Number(process.env.PORT || 3000);
 const WEBHOOK_CRIANCA = process.env.WEBHOOK_CRIANCA || "";
 const WEBHOOK_MONITOR = process.env.WEBHOOK_MONITOR || "";
-const WEBHOOK_CADASTRO = process.env.WEBHOOK_CADASTRO || "https://workflows.rendamais.com.br/webhook/304a56e6-8f63-4b8c-9798-3e0a35f6be70-musicalizacao-infiantil";
+const WEBHOOK_CADASTRO = process.env.WEBHOOK_CADASTRO || "https://webhooks.rendamais.com.br/webhook/304a56e6-8f63-4b8c-9798-3e0a35f6be70-musicalizacao-infiantil";
 const SUPABASE_URL = process.env.SUPABASE_URL || "";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const SUPABASE_TABLE_CADASTROS = process.env.SUPABASE_TABLE_CADASTROS || "";
@@ -370,8 +370,11 @@ function detectDuplicate(tipo, payload, entries) {
 
 async function forwardToWebhook(tipo, payload, metadata = {}) {
   const webhookByType = tipo === "crianca" ? WEBHOOK_CRIANCA : WEBHOOK_MONITOR;
-  const webhook = webhookByType || WEBHOOK_CADASTRO;
-  if (!webhook) return { forwarded: false };
+  const webhookFallback = WEBHOOK_CADASTRO;
+  const webhookCandidates = [];
+  if (webhookByType) webhookCandidates.push({ url: webhookByType, source: "type" });
+  if (webhookFallback && webhookFallback !== webhookByType) webhookCandidates.push({ url: webhookFallback, source: "fallback" });
+  if (webhookCandidates.length === 0) return { forwarded: false, webhookStatus: 0, webhookErrorBody: "No webhook configured." };
 
   const normalizedPayload = toUppercaseDeep(payload);
   const webhookUuid = metadata.uuid || "";
@@ -398,14 +401,34 @@ async function forwardToWebhook(tipo, payload, metadata = {}) {
     webhookPayload.polo = poloMonitor;
   }
 
-  const response = await fetch(webhook, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(webhookPayload)
-  });
+  let lastFailure = { webhookStatus: 0, webhookErrorBody: "", webhookUrl: "", webhookSource: "" };
 
-  if (!response.ok) return { forwarded: false, webhookStatus: response.status };
-  return { forwarded: true, webhookStatus: response.status };
+  for (const candidate of webhookCandidates) {
+    const response = await fetch(candidate.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(webhookPayload)
+    });
+
+    if (response.ok) {
+      return {
+        forwarded: true,
+        webhookStatus: response.status,
+        webhookUrl: candidate.url,
+        webhookSource: candidate.source
+      };
+    }
+
+    const errorBody = await response.text().catch(() => "");
+    lastFailure = {
+      webhookStatus: response.status,
+      webhookErrorBody: String(errorBody || "").slice(0, 500),
+      webhookUrl: candidate.url,
+      webhookSource: candidate.source
+    };
+  }
+
+  return { forwarded: false, ...lastFailure };
 }
 
 function validateRequired(tipo, payload) {
@@ -516,9 +539,18 @@ async function handleRequest(req, res) {
       });
 
       if (!webhookResult.forwarded) {
+        console.error("webhook_forward_failed", {
+          tipo,
+          status: webhookResult.webhookStatus || 0,
+          source: webhookResult.webhookSource || "",
+          url: webhookResult.webhookUrl || "",
+          body: webhookResult.webhookErrorBody || ""
+        });
         sendJson(res, 502, {
           error: "Falha ao encaminhar cadastro para a integração.",
-          webhookStatus: webhookResult.webhookStatus || 0
+          webhookStatus: webhookResult.webhookStatus || 0,
+          webhookSource: webhookResult.webhookSource || "",
+          webhookUrl: webhookResult.webhookUrl || ""
         });
         return;
       }
