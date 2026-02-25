@@ -1,8 +1,8 @@
 {
-  "name": "cadastro-music",
+  "name": "cadastro-musicalizacao",
   "version": "1.0.0",
   "private": true,
-  "description": "Sistema simples de cadastro infantil e monitor - CCB Regional Itapevi",
+  "description": "Sistema de Cadastro Infantil e Monitores - CCB Regional Itapevi",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",

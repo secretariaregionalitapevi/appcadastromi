@@ -1,22 +1,48 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Cadastros - Musicalização Infantil</title>
   <link rel="icon" type="image/png" href="/assets/favicon.png" />
-  <link rel="stylesheet" href="/styles/main.css?v=20260222" />
+  <link rel="stylesheet" href="/styles/main.css?v=20260225" />
+  <script>
+    (function () {
+      const path = window.location.pathname.toLowerCase();
+      const tipo = path.endsWith("/monitor") ? "monitor" : path.endsWith("/crianca") ? "crianca" : "";
+      if (tipo) {
+        document.documentElement.setAttribute("data-cadastro-tipo", tipo);
+      }
+    })();
+  </script>
 </head>
 <body>
   <div class="wrap">
     <header class="form-header">
-      <div class="header-brand">
-        <img src="/assets/logo-ccb.png" alt="Congregação Cristã no Brasil" class="logo-small" />
-        <div>
-          <h1 id="cadastroTitulo">Cadastros - Musicalização Infantil</h1>
-          <p id="cadastroSubtitulo">Escolha abaixo qual cadastro será realizado: <b>Criança</b> ou <b>Monitor</b>.</p>
+      <div class="form-header-top">
+        <div class="header-brand">
+          <img src="/assets/logo-ccb.png" alt="Congregação Cristã no Brasil" class="logo-small" />
+          <div>
+            <h1 id="cadastroTitulo">Cadastros - Musicalização Infantil</h1>
+            <p id="cadastroSubtitulo">Escolha abaixo qual cadastro será realizado: <b>Criança</b> ou <b>Monitor</b>.</p>
+          </div>
         </div>
+        <a class="back-home-btn" href="/">Voltar para a página principal</a>
       </div>
+      <script>
+        (function () {
+          const tipo = document.documentElement.getAttribute("data-cadastro-tipo");
+          const titulo = document.getElementById("cadastroTitulo");
+          const subtitulo = document.getElementById("cadastroSubtitulo");
+          if (tipo === "crianca") {
+            titulo.textContent = "Cadastro de Criança";
+            subtitulo.textContent = "Preencha os dados para o cadastro da criança.";
+          } else if (tipo === "monitor") {
+            titulo.textContent = "Cadastro de Monitor";
+            subtitulo.textContent = "Preencha os dados para o cadastro do monitor.";
+          }
+        })();
+      </script>
       <div class="picker" id="cadastroPicker">
         <button class="tabbtn active" id="btnCrianca" type="button">Cadastro de Criança</button>
         <button class="tabbtn" id="btnMonitor" type="button">Cadastro de Monitor</button>
@@ -43,9 +69,15 @@
             <label>Nascimento (dd/mm/aaaa) *</label>
             <input name="data_nascimento" placeholder="ex.: 12/03/2018" required />
           </div>
-          <div class="col-12">
+          <div class="col-6">
             <label>Comum congregação *</label>
             <input name="comum_congregacao" class="comum-field" placeholder="Clique para pesquisar a comum..." autocomplete="off" required />
+          </div>
+          <div class="col-6">
+            <label>Em qual polo vai participar? *</label>
+            <select name="polo_participacao" required>
+              <option value="">Selecione</option>
+            </select>
           </div>
         </div>
       </fieldset>
@@ -224,7 +256,9 @@
           </div>
           <div class="col-6">
             <label>Em qual polo vai auxiliar? *</label>
-            <input name="polo_auxilio" required />
+            <select name="polo_auxilio" required>
+              <option value="">Selecione</option>
+            </select>
           </div>
 
           <div class="col-4">
@@ -329,6 +363,13 @@
 
   <script src="/scripts/comuns.js?v=20260222"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script src="/scripts/cadastro.js?v=20260220"></script>
+  <script src="/scripts/cadastro.js?v=20260231"></script>
 </body>
 </html>
+
+
+
+
+
+
+

@@ -9,16 +9,41 @@ const rootDir = path.resolve(__dirname, "..");
 const publicDir = path.join(rootDir, "public");
 const dataDir = path.join(rootDir, "data");
 const dataFile = path.join(dataDir, "cadastros.ndjson");
+const envFile = path.join(rootDir, ".env");
+
+if (fs.existsSync(envFile)) {
+  const envLines = fs.readFileSync(envFile, "utf-8").split(/\r?\n/);
+  for (const line of envLines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+
+    const eqIndex = trimmed.indexOf("=");
+    if (eqIndex < 0) continue;
+
+    const key = trimmed.slice(0, eqIndex).trim();
+    let value = trimmed.slice(eqIndex + 1).trim();
+    if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
 
 const PORT = Number(process.env.PORT || 3000);
 const WEBHOOK_CRIANCA = process.env.WEBHOOK_CRIANCA || "";
 const WEBHOOK_MONITOR = process.env.WEBHOOK_MONITOR || "";
 const WEBHOOK_CADASTRO = process.env.WEBHOOK_CADASTRO || "https://workflows.rendamais.com.br/webhook/304a56e6-8f63-4b8c-9798-3e0a35f6be70-musicalizacao-infiantil";
-const SUPABASE_URL = process.env.SUPABASE_URL || "https://sqamxlhfazulrisiptud.supabase.co";
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxYW14bGhmYXp1bHJpc2lwdHVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzM3NTg4NCwiZXhwIjoyMDgyOTUxODg0fQ.w92yMKGGh5-ewRq0q6Pdl8TstzGlx0sGms1FCRveDYc";
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const SUPABASE_TABLE_CADASTROS = process.env.SUPABASE_TABLE_CADASTROS || "";
 const SUPABASE_TABLE_CRIANCA = process.env.SUPABASE_TABLE_CRIANCA || "musicalizacao_criancas";
 const SUPABASE_TABLE_MONITOR = process.env.SUPABASE_TABLE_MONITOR || "musicalizacao_monitores";
+const REQUIRE_SUPABASE_DUPLICATE_CHECK = (process.env.REQUIRE_SUPABASE_DUPLICATE_CHECK || "true").toLowerCase() !== "false";
+const ENABLE_LOCAL_PERSISTENCE = (process.env.ENABLE_LOCAL_PERSISTENCE || "false").toLowerCase() === "true";
+const REQUIRE_LOCAL_DUPLICATE_CHECK = (process.env.REQUIRE_LOCAL_DUPLICATE_CHECK || "false").toLowerCase() === "true";
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -63,6 +88,8 @@ async function saveSubmission(tipo, payload) {
     persistedLocally: false
   };
 
+  if (!ENABLE_LOCAL_PERSISTENCE) return entry;
+
   // Vercel serverless pode ter filesystem somente leitura.
   try {
     await fsp.mkdir(dataDir, { recursive: true });
@@ -73,6 +100,35 @@ async function saveSubmission(tipo, payload) {
   }
 
   return entry;
+}
+
+async function readLocalEntries() {
+  if (!REQUIRE_LOCAL_DUPLICATE_CHECK) return [];
+
+  try {
+    const content = await fsp.readFile(dataFile, "utf-8");
+    return content
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        try {
+          const parsed = JSON.parse(line);
+          if (!parsed || typeof parsed !== "object") return null;
+          return {
+            id: parsed.uuid || parsed.id || "",
+            tipo: parsed.tipo || "",
+            payload: parsed.payload || {},
+            createdAt: parsed.createdAt || parsed.created_at || ""
+          };
+        } catch {
+          return null;
+        }
+      })
+      .filter((entry) => entry && entry.tipo && entry.payload);
+  } catch {
+    return [];
+  }
 }
 
 function normalizeText(value) {
@@ -154,8 +210,46 @@ function namesLookSame(a, b) {
   return tokenSimilarity(normalizedA, normalizedB) >= 0.6;
 }
 
+function formatDateTimeBR(value) {
+  const dateObj = value ? new Date(value) : null;
+  if (!dateObj || Number.isNaN(dateObj.getTime())) {
+    return { date: "--/--/----", time: "--:--:--" };
+  }
+
+  return {
+    date: dateObj.toLocaleDateString("pt-BR"),
+    time: dateObj.toLocaleTimeString("pt-BR", { hour12: false })
+  };
+}
+
+function buildDuplicateDetails(tipo, entry) {
+  const existing = entry?.payload || {};
+  const isMonitor = tipo === "monitor";
+  const nome = isMonitor ? existing.nome_completo : existing.nome_crianca;
+  const polo = isMonitor ? existing.polo_auxilio : existing.polo_participacao;
+  const comum = existing.comum_congregacao || "";
+  const createdAt = entry?.createdAt || existing.created_at || existing.createdAt || "";
+  const { date, time } = formatDateTimeBR(createdAt);
+
+  return {
+    tipo,
+    nome: String(nome || "").trim() || "Cadastro",
+    comum: String(comum || "").trim() || "Comum não informada",
+    polo: String(polo || "").trim() || "Polo não informado",
+    date,
+    time
+  };
+}
+
 async function readSavedEntries() {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return [];
+  const localEntries = await readLocalEntries();
+
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    if (REQUIRE_SUPABASE_DUPLICATE_CHECK) {
+      throw new Error("supabase_duplicate_check_not_configured");
+    }
+    return localEntries;
+  }
 
   const table = SUPABASE_TABLE_CADASTROS || "";
   const endpoints = table
@@ -190,7 +284,8 @@ async function readSavedEntries() {
         allEntries.push({
           id: row.registro_uuid || row.id || "",
           tipo: row.tipo,
-          payload: row.payload
+          payload: row.payload,
+          createdAt: row.created_at || row.createdAt || ""
         });
         continue;
       }
@@ -199,12 +294,19 @@ async function readSavedEntries() {
       allEntries.push({
         id: row.registro_uuid || row.id || "",
         tipo: inferredType,
-        payload: row
+        payload: row,
+        createdAt: row.created_at || row.createdAt || ""
       });
     }
   }
 
-  return allEntries;
+  const deduped = new Map();
+  for (const entry of [...allEntries, ...localEntries]) {
+    const key = `${entry.tipo}::${entry.id}::${JSON.stringify(entry.payload || {})}`;
+    if (!deduped.has(key)) deduped.set(key, entry);
+  }
+
+  return [...deduped.values()];
 }
 
 function detectDuplicate(tipo, payload, entries) {
@@ -223,15 +325,15 @@ function detectDuplicate(tipo, payload, entries) {
       const sameName = namesLookSame(payload.nome_completo, existing.nome_completo);
 
       if (email && existingEmail && email === existingEmail) {
-        return { duplicate: true, matchedId: entry.id, reason: "email" };
+        return { duplicate: true, matchedId: entry.id, reason: "email", matchedEntry: entry };
       }
 
       if (phone && existingPhone && phone === existingPhone) {
-        return { duplicate: true, matchedId: entry.id, reason: "celular" };
+        return { duplicate: true, matchedId: entry.id, reason: "celular", matchedEntry: entry };
       }
 
       if (sameName && congregation && congregation === existingCongregation) {
-        return { duplicate: true, matchedId: entry.id, reason: "nome_e_comum" };
+        return { duplicate: true, matchedId: entry.id, reason: "nome_e_comum", matchedEntry: entry };
       }
     }
 
@@ -250,15 +352,15 @@ function detectDuplicate(tipo, payload, entries) {
       const sameBirthDate = birthDate && existingBirthDate && birthDate === existingBirthDate;
 
       if (samePhone && sameCongregation && (childNameMatch || guardianNameMatch || fatherNameMatch || motherNameMatch)) {
-        return { duplicate: true, matchedId: entry.id, reason: "telefone_comum_nome" };
+        return { duplicate: true, matchedId: entry.id, reason: "telefone_comum_nome", matchedEntry: entry };
       }
 
       if (sameBirthDate && sameCongregation && (childNameMatch || (fatherNameMatch && motherNameMatch))) {
-        return { duplicate: true, matchedId: entry.id, reason: "nascimento_comum_nome" };
+        return { duplicate: true, matchedId: entry.id, reason: "nascimento_comum_nome", matchedEntry: entry };
       }
 
       if (sameCongregation && childNameMatch && guardianNameMatch) {
-        return { duplicate: true, matchedId: entry.id, reason: "nome_crianca_responsavel" };
+        return { duplicate: true, matchedId: entry.id, reason: "nome_crianca_responsavel", matchedEntry: entry };
       }
     }
   }
@@ -277,10 +379,24 @@ async function forwardToWebhook(tipo, payload, metadata = {}) {
     ...normalizedPayload,
     tipo: String(tipo || "").toUpperCase(),
     tipo_original: tipo,
+    id: webhookUuid,
     uuid: webhookUuid,
     registro_uuid: metadata.uuid || "",
     created_at: metadata.createdAt || new Date().toISOString()
   };
+
+  // Compatibilidade com planilhas/workflows que usam nomes de campo diferentes para polo.
+  const poloCrianca = webhookPayload.polo_participacao || webhookPayload.polo || webhookPayload.polo_auxilio || "";
+  const poloMonitor = webhookPayload.polo_auxilio || webhookPayload.polo || webhookPayload.polo_participacao || "";
+  if (tipo === "crianca") {
+    webhookPayload.polo_participacao = poloCrianca;
+    webhookPayload.polo_auxilio = webhookPayload.polo_auxilio || poloCrianca;
+    webhookPayload.polo = poloCrianca;
+  } else {
+    webhookPayload.polo_auxilio = poloMonitor;
+    webhookPayload.polo_participacao = webhookPayload.polo_participacao || poloMonitor;
+    webhookPayload.polo = poloMonitor;
+  }
 
   const response = await fetch(webhook, {
     method: "POST",
@@ -294,7 +410,7 @@ async function forwardToWebhook(tipo, payload, metadata = {}) {
 
 function validateRequired(tipo, payload) {
   const requiredByType = {
-    crianca: ["nome_crianca", "sexo", "data_nascimento", "comum_congregacao", "nome_responsavel", "celular_responsavel"],
+    crianca: ["nome_crianca", "sexo", "data_nascimento", "comum_congregacao", "polo_participacao", "nome_responsavel", "celular_responsavel"],
     monitor: ["nome_completo", "comum_congregacao", "idade", "celular", "email", "polo_auxilio"]
   };
 
@@ -383,10 +499,12 @@ async function handleRequest(req, res) {
       const existingEntries = await readSavedEntries();
       const duplicateCheck = detectDuplicate(tipo, payload, existingEntries);
       if (duplicateCheck.duplicate) {
+        const duplicate = buildDuplicateDetails(tipo, duplicateCheck.matchedEntry);
         sendJson(res, 409, {
           error: "Cadastro duplicado detectado.",
           duplicateOf: duplicateCheck.matchedId,
-          duplicateReason: duplicateCheck.reason
+          duplicateReason: duplicateCheck.reason,
+          duplicate
         });
         return;
       }
@@ -417,6 +535,11 @@ async function handleRequest(req, res) {
 
     if (typeof error.message === "string" && error.message.startsWith("supabase_duplicate_check_failed:")) {
       sendJson(res, 502, { error: "Falha ao validar duplicidade no Supabase." });
+      return;
+    }
+
+    if (error.message === "supabase_duplicate_check_not_configured") {
+      sendJson(res, 500, { error: "Validação de duplicidade exige SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY." });
       return;
     }
 

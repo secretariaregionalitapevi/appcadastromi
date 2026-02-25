@@ -6,6 +6,49 @@
   const cadastroTitulo = document.getElementById("cadastroTitulo");
   const cadastroSubtitulo = document.getElementById("cadastroSubtitulo");
   const cadastroPicker = document.getElementById("cadastroPicker");
+  const POLOS = [
+    "Altos de Caucaia",
+    "Central de Caucaia",
+    "Central VGP",
+    "Itapevi Central",
+    "Jardim Miranda",
+    "Miguel Mirizola",
+    "Morro Grande",
+    "Nova Itapevi",
+    "Pereiras",
+    "Rosemary",
+    "Sítio Tabuleiro",
+    "Vila Belizário"
+  ].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+  const poloParticipacaoSelect = document.querySelector('select[name="polo_participacao"]');
+  const poloAuxilioSelect = document.querySelector('select[name="polo_auxilio"]');
+
+  function hydratePoloSelect(selectEl) {
+    if (!selectEl) return;
+    const selectedValue = (selectEl.value || "").trim();
+    selectEl.innerHTML = "";
+
+    const placeholderOption = document.createElement("option");
+    placeholderOption.value = "";
+    placeholderOption.textContent = "Selecione";
+    selectEl.appendChild(placeholderOption);
+
+    POLOS.forEach((polo) => {
+      const option = document.createElement("option");
+      option.value = polo;
+      option.textContent = polo;
+      selectEl.appendChild(option);
+    });
+
+    if (selectedValue && POLOS.includes(selectedValue)) {
+      selectEl.value = selectedValue;
+    }
+  }
+
+  function hydratePoloSelects() {
+    hydratePoloSelect(poloParticipacaoSelect);
+    hydratePoloSelect(poloAuxilioSelect);
+  }
 
   function show(tipo) {
     const isCrianca = tipo === "crianca";
@@ -70,35 +113,52 @@
     });
   }
 
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   async function showDuplicateModal(duplicate) {
-    const nome = duplicate?.nome || "Cadastro";
-    const comum = duplicate?.comum || "Comum não informada";
-    const data = duplicate?.date || "--/--/----";
-    const hora = duplicate?.time || "--:--:--";
+    const nome = escapeHtml(duplicate?.nome || "Cadastro");
+    const comum = escapeHtml(duplicate?.comum || "Comum não informada");
+    const polo = escapeHtml(duplicate?.polo || "Polo não informado");
+    const data = escapeHtml(duplicate?.date || "--/--/----");
+    const hora = escapeHtml(duplicate?.time || "--:--:--");
+    const tipo = duplicate?.tipo === "monitor" ? "monitor" : "criança";
 
     if (!window.Swal) {
-      return window.confirm(`${nome} já possui cadastro. Deseja cadastrar mesmo assim?`);
+      window.alert(`${nome} já possui cadastro. Procurar o coordenador do Polo.`);
+      return false;
     }
 
     const html = `
-      <div style="text-align:left;max-width:340px;margin:0 auto;">
-        <p style="margin:0 0 8px;"><strong>${nome}</strong><br/>de <strong>${comum}</strong><br/>já possui cadastro!</p>
+      <div style="text-align:left;max-width:360px;margin:0 auto;">
+        <p style="margin:0 0 10px;line-height:1.35;">
+          <strong>${nome}</strong> de <strong>${comum}</strong><br/>
+          já foi cadastrado(a) como ${tipo}.
+        </p>
+        <p style="margin:0 0 10px;line-height:1.35;color:#334155;">
+          <strong>Polo:</strong> ${polo}
+        </p>
         <p style="margin:0;color:#4b5563;">Data: ${data}<br/>Horário: ${hora}</p>
+        <p style="margin:12px auto 0;color:#C41E34;font-weight:700;text-align:center;line-height:1.35;max-width:320px;">Por favor, procure o Cooordenador (a) do Polo.</p>
       </div>
     `;
 
-    const result = await window.Swal.fire({
+    await window.Swal.fire({
       title: "Cadastro Duplicado!",
       html,
       icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#dc2626",
-      cancelButtonColor: "#6b7280",
-      confirmButtonText: "Cadastrar Mesmo Assim",
-      cancelButtonText: "Cancelar"
+      showCancelButton: false,
+      confirmButtonColor: "#6b7280",
+      confirmButtonText: "✕ Cancelar"
     });
 
-    return result.isConfirmed;
+    return false;
   }
 
   async function submitForm(formEl, endpoint, btnEl, options = {}) {
@@ -118,10 +178,7 @@
 
       if (!res.ok) {
         if (res.status === 409 && data?.duplicate) {
-          const proceed = await showDuplicateModal(data.duplicate);
-          if (proceed) {
-            await submitForm(formEl, endpoint, btnEl, { allowDuplicate: true });
-          }
+          await showDuplicateModal(data.duplicate);
           return;
         }
 
@@ -138,6 +195,8 @@
       btnEl.disabled = false;
     }
   }
+
+  hydratePoloSelects();
 
   btnCrianca.addEventListener("click", () => show("crianca"));
   btnMonitor.addEventListener("click", () => show("monitor"));
