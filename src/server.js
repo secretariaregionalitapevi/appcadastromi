@@ -1,4 +1,4 @@
-﻿const http = require("http");
+const http = require("http");
 const fs = require("fs");
 const fsp = require("fs/promises");
 const path = require("path");
@@ -100,6 +100,41 @@ async function saveSubmission(tipo, payload) {
   }
 
   return entry;
+}
+
+/**
+ * Salva os dados diretamente no Supabase usando a API REST (PostgREST)
+ * @param {string} tipo - 'crianca' ou 'monitor'
+ * @param {object} payload - Dados do formulário (já em CAIXA ALTA)
+ */
+async function saveToSupabase(tipo, payload) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("supabase_not_configured");
+  }
+
+  const table = tipo === "monitor" ? SUPABASE_TABLE_MONITOR : SUPABASE_TABLE_CRIANCA;
+  const url = `${SUPABASE_URL.replace(/\/$/, "")}/rest/v1/${table}`;
+
+  // Log para depuração (visto nos logs do Vercel)
+  console.log(`[Supabase] Gravando na tabela ${table}...`);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": SUPABASE_SERVICE_ROLE_KEY,
+      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      "Prefer": "return=minimal" // Reduz overhead se não precisamos do retorno
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "Erro desconhecido");
+    throw new Error(`supabase_insert_failed:${response.status}:${errorText}`);
+  }
+
+  return { success: true };
 }
 
 async function readLocalEntries() {
@@ -533,35 +568,35 @@ async function handleRequest(req, res) {
       }
 
       const saved = await saveSubmission(tipo, payload);
-      const webhookResult = await forwardToWebhook(tipo, payload, {
-        uuid: saved.id,
-        createdAt: saved.createdAt
-      });
-
-      if (!webhookResult.forwarded) {
-        console.error("webhook_forward_failed", {
+      
+      // PERSISTÊNCIA DIRETA NO SUPABASE
+      // Conforme solicitado, removemos a rota de envio (webhook/Google Sheets)
+      // e passamos a gravar diretamente no banco de dados Supabase.
+      let supabaseResult;
+      try {
+        supabaseResult = await saveToSupabase(tipo, payload);
+      } catch (error) {
+        console.error("supabase_save_failed", {
           tipo,
-          status: webhookResult.webhookStatus || 0,
-          source: webhookResult.webhookSource || "",
-          url: webhookResult.webhookUrl || "",
-          body: webhookResult.webhookErrorBody || ""
+          error: error.message,
+          stack: error.stack
         });
-        sendJson(res, 502, {
-          error: "Falha ao encaminhar cadastro para a integração.",
-          webhookStatus: webhookResult.webhookStatus || 0,
-          webhookSource: webhookResult.webhookSource || "",
-          webhookUrl: webhookResult.webhookUrl || ""
+        
+        // Se falhar no Supabase, retornamos 502 (Bad Gateway) para indicar falha na integração
+        sendJson(res, 502, { 
+          error: "Falha ao persistir dados no banco de dados.",
+          details: error.message 
         });
         return;
       }
 
       sendJson(res, 201, {
-        message: "Cadastro recebido com sucesso.",
+        message: "Cadastro realizado com sucesso.",
         id: saved.id,
         uuid: saved.uuid,
         createdAt: saved.createdAt,
         persistedLocally: saved.persistedLocally,
-        ...webhookResult
+        supabase: true
       });
       return;
     }
