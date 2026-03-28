@@ -75,10 +75,13 @@
       }
     }
 
-    const checkboxNames = ["de_acordo_voluntario", "autoriza_tratamento_dados"];
-    checkboxNames.forEach((n) => {
-      if (obj[n] === undefined) obj[n] = "";
-    });
+    const isMonitor = formEl.id === "formMonitor";
+    if (isMonitor) {
+      const checkboxNames = ["de_acordo_voluntario", "autoriza_tratamento_dados"];
+      checkboxNames.forEach((n) => {
+        if (obj[n] === undefined) obj[n] = "";
+      });
+    }
 
     return obj;
   }

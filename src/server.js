@@ -572,6 +572,13 @@ async function handleRequest(req, res) {
       // PERSISTÊNCIA DIRETA NO SUPABASE
       // Conforme solicitado, removemos a rota de envio (webhook/Google Sheets)
       // e passamos a gravar diretamente no banco de dados Supabase.
+      
+      // Limpeza de campos: remove campos que não existem na tabela de crianças
+      if (tipo === "crianca") {
+        delete payload.de_acordo_voluntario;
+        delete payload.autoriza_tratamento_dados;
+      }
+
       let supabaseResult;
       try {
         supabaseResult = await saveToSupabase(tipo, payload);
