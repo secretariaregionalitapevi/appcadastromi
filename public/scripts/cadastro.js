@@ -18,7 +18,8 @@
     "Pereiras",
     "Rosemary",
     "Sítio Tabuleiro",
-    "Vila Belizário"
+    "Vila Belizário",
+    "Vila Doutor Cardoso"
   ].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
   const poloParticipacaoSelect = document.querySelector('select[name="polo_participacao"]');
   const poloAuxilioSelect = document.querySelector('select[name="polo_auxilio"]');
