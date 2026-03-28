@@ -126,7 +126,7 @@ async function saveToSupabase(tipo, payload) {
       "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
       "Prefer": "return=minimal" // Reduz overhead se não precisamos do retorno
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify([payload]) // PostgREST prefere array para POST
   });
 
   if (!response.ok) {

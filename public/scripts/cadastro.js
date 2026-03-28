@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
   const btnCrianca = document.getElementById("btnCrianca");
   const btnMonitor = document.getElementById("btnMonitor");
   const formCrianca = document.getElementById("formCrianca");
@@ -183,7 +183,8 @@
         }
 
         const msg = data?.error ? `${data.error}` : `Erro ao enviar (${res.status}).`;
-        await showErrorModal(msg);
+        const details = data?.details ? `\n\nDetalhes: ${data.details}` : "";
+        await showErrorModal(msg + details);
         return;
       }
 
