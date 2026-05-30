@@ -105,7 +105,7 @@ async function saveSubmission(tipo, payload) {
 /**
  * Salva os dados diretamente no Supabase usando a API REST (PostgREST)
  * @param {string} tipo - 'crianca' ou 'monitor'
- * @param {object} payload - Dados do formulário (já em CAIXA ALTA)
+ * @param {object} payload - Dados do formulÃ¡rio (jÃ¡ em CAIXA ALTA)
  */
 async function saveToSupabase(tipo, payload) {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -115,7 +115,7 @@ async function saveToSupabase(tipo, payload) {
   const table = tipo === "monitor" ? SUPABASE_TABLE_MONITOR : SUPABASE_TABLE_CRIANCA;
   const url = `${SUPABASE_URL.replace(/\/$/, "")}/rest/v1/${table}`;
 
-  // Log para depuração (visto nos logs do Vercel)
+  // Log para depuraÃ§Ã£o (visto nos logs do Vercel)
   console.log(`[Supabase] Gravando na tabela ${table}...`);
 
   const response = await fetch(url, {
@@ -124,7 +124,7 @@ async function saveToSupabase(tipo, payload) {
       "Content-Type": "application/json",
       "apikey": SUPABASE_SERVICE_ROLE_KEY,
       "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      "Prefer": "return=minimal" // Reduz overhead se não precisamos do retorno
+      "Prefer": "return=minimal" // Reduz overhead se nÃ£o precisamos do retorno
     },
     body: JSON.stringify([payload]) // PostgREST prefere array para POST
   });
@@ -269,8 +269,8 @@ function buildDuplicateDetails(tipo, entry) {
   return {
     tipo,
     nome: String(nome || "").trim() || "Cadastro",
-    comum: String(comum || "").trim() || "Comum não informada",
-    polo: String(polo || "").trim() || "Polo não informado",
+    comum: String(comum || "").trim() || "Comum nÃ£o informada",
+    polo: String(polo || "").trim() || "Polo nÃ£o informado",
     date,
     time
   };
@@ -492,12 +492,12 @@ async function serveStatic(reqPath, res) {
   try {
     stat = await fsp.stat(filePath);
   } catch {
-    sendJson(res, 404, { error: "Arquivo não encontrado." });
+    sendJson(res, 404, { error: "Arquivo nÃ£o encontrado." });
     return;
   }
 
   if (stat.isDirectory()) {
-    sendJson(res, 404, { error: "Arquivo não encontrado." });
+    sendJson(res, 404, { error: "Arquivo nÃ£o encontrado." });
     return;
   }
 
@@ -539,18 +539,84 @@ async function handleRequest(req, res) {
         return;
       }
 
-      sendJson(res, 404, { error: "Rota não encontrada." });
+      if (pathname === "/api/comuns") {
+        const supabaseUrl = process.env.SUPABASE_URL;
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (!supabaseUrl || !supabaseKey) {
+          return sendJson(res, 500, { error: "ConfiguraÃ§Ã£o do Supabase ausente." });
+        }
+
+        const normalizeValue = (value) => String(value || "").trim();
+        const normalizeComum = (item) => {
+          const comum = normalizeValue(item?.name || item?.nome || item?.comum || item?.descricao || item?.description);
+          const cidade = normalizeValue(item?.cidade || item?.city || item?.municipio || item?.localidade);
+          if (!comum) return null;
+          return { comum, cidade };
+        };
+
+        const apiUrl = new URL(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/comum?select=*`);
+        try {
+          const response = await fetch(apiUrl, {
+            headers: {
+              apikey: supabaseKey,
+              Authorization: `Bearer ${supabaseKey}`
+            }
+          });
+          const data = await response.json();
+          const comuns = Array.isArray(data)
+            ? data.map(normalizeComum).filter(Boolean).sort((a, b) => a.comum.localeCompare(b.comum, "pt-BR"))
+            : [];
+          return sendJson(res, 200, comuns);
+        } catch (err) {
+          return sendJson(res, 500, { error: "Erro ao buscar comuns." });
+        }
+      }
+
+      if (pathname === "/api/polos") {
+        const supabaseUrl = process.env.SUPABASE_URL;
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (!supabaseUrl || !supabaseKey) {
+          return sendJson(res, 500, { error: "ConfiguraÃ§Ã£o do Supabase ausente." });
+        }
+
+        const normalizeValue = (value) => String(value || "").trim();
+        const normalizePolo = (item) => {
+          const polo = normalizeValue(item?.nome_polo || item?.polo || item?.name || item?.nome || item?.comum || item?.descricao);
+          const cidade = normalizeValue(item?.localidade || item?.cidade || item?.city || item?.municipio);
+          if (!polo) return null;
+          return { polo, cidade };
+        };
+
+        const apiUrl = new URL(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/musicalizacao_polos?select=*`);
+        try {
+          const response = await fetch(apiUrl, {
+            headers: {
+              apikey: supabaseKey,
+              Authorization: `Bearer ${supabaseKey}`
+            }
+          });
+          const data = await response.json();
+          const polos = Array.isArray(data)
+            ? data.map(normalizePolo).filter(Boolean).sort((a, b) => a.polo.localeCompare(b.polo, "pt-BR"))
+            : [];
+          return sendJson(res, 200, polos);
+        } catch (err) {
+          return sendJson(res, 500, { error: "Erro ao buscar polos." });
+        }
+      }
+
+      sendJson(res, 404, { error: "Rota nÃ£o encontrada." });
       return;
     }
 
     if (req.method === "POST" && (pathname === "/api/cadastros/crianca" || pathname === "/api/cadastros/monitor")) {
-      const tipo = pathname.endsWith("crianca") ? "crianca" : "monitor";
+      const tipo = pathname.endsWith("crianca") ? "crianca" : "monitor"; 
       const rawPayload = await readJsonBody(req);
       const payload = toUppercaseDeep(rawPayload);
       const missing = validateRequired(tipo, payload);
 
       if (missing.length > 0) {
-        sendJson(res, 400, { error: "Campos obrigatórios ausentes.", missing });
+        sendJson(res, 400, { error: "Campos obrigatÃ³rios ausentes.", missing });
         return;
       }
 
@@ -569,11 +635,11 @@ async function handleRequest(req, res) {
 
       const saved = await saveSubmission(tipo, payload);
       
-      // PERSISTÊNCIA DIRETA NO SUPABASE
+      // PERSISTÃŠNCIA DIRETA NO SUPABASE
       // Conforme solicitado, removemos a rota de envio (webhook/Google Sheets)
       // e passamos a gravar diretamente no banco de dados Supabase.
       
-      // Limpeza de campos: remove campos que não existem na tabela de crianças
+      // Limpeza de campos: remove campos que nÃ£o existem na tabela de crianÃ§as
       if (tipo === "crianca") {
         delete payload.de_acordo_voluntario;
         delete payload.autoriza_tratamento_dados;
@@ -589,7 +655,7 @@ async function handleRequest(req, res) {
           stack: error.stack
         });
         
-        // Se falhar no Supabase, retornamos 502 (Bad Gateway) para indicar falha na integração
+        // Se falhar no Supabase, retornamos 502 (Bad Gateway) para indicar falha na integraÃ§Ã£o
         sendJson(res, 502, { 
           error: "Falha ao persistir dados no banco de dados.",
           details: error.message 
@@ -608,7 +674,7 @@ async function handleRequest(req, res) {
       return;
     }
 
-    sendJson(res, 404, { error: "Rota não encontrada." });
+    sendJson(res, 404, { error: "Rota nÃ£o encontrada." });
   } catch (error) {
     if (error.message === "payload_too_large") {
       sendJson(res, 413, { error: "Payload excede 1MB." });
@@ -621,12 +687,12 @@ async function handleRequest(req, res) {
     }
 
     if (error.message === "supabase_duplicate_check_not_configured") {
-      sendJson(res, 500, { error: "Validação de duplicidade exige SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY." });
+      sendJson(res, 500, { error: "ValidaÃ§Ã£o de duplicidade exige SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY." });
       return;
     }
 
     if (error instanceof SyntaxError) {
-      sendJson(res, 400, { error: "JSON inválido." });
+      sendJson(res, 400, { error: "JSON invÃ¡lido." });
       return;
     }
 
@@ -646,3 +712,5 @@ if (process.env.VERCEL) {
     console.log(`Servidor iniciado em http://localhost:${PORT}`);
   });
 }
+
+

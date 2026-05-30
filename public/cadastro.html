@@ -67,7 +67,7 @@
           </div>
           <div class="col-3">
             <label>Nascimento (dd/mm/aaaa) *</label>
-            <input name="data_nascimento" placeholder="ex.: 12/03/2018" required />
+            <input name="data_nascimento" placeholder="ex.: 12/03/2018" oninput="let v=this.value.replace(/\D/g,'').slice(0,8); if(v.length>=5) v=v.replace(/^(\d{2})(\d{2})(\d{1,4})/,'$1/$2/$3'); else if(v.length>=3) v=v.replace(/^(\d{2})(\d{1,2})/,'$1/$2'); this.value=v;" maxlength="10" pattern="^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/\d{4}$" required />
           </div>
           <div class="col-6">
             <label>Comum congregação *</label>
@@ -130,7 +130,7 @@
           </div>
           <div class="col-3">
             <label>Celular do responsável *</label>
-            <input name="celular_responsavel" placeholder="(11) 99999-9999" required />
+            <input name="celular_responsavel" placeholder="(11) 99999-9999" oninput="let v=this.value.replace(/\D/g,'').slice(0,11); v=v.replace(/^(\d{2})(\d)/g,'($1) $2'); v=v.replace(/(\d)(\d{4})$/,'$1-$2'); this.value=v;" maxlength="15" inputmode="numeric" pattern="^\(\d{2}\)\s\d{4,5}-\d{4}$" required />
           </div>
           <div class="col-3">
             <label>Tem WhatsApp?</label>
@@ -180,7 +180,7 @@
           </div>
           <div class="col-4">
             <label>CEP *</label>
-            <input name="cep" placeholder="00000-000" required />
+            <input name="cep" placeholder="00000-000" oninput="let v=this.value.replace(/\D/g,'').slice(0,8); v=v.replace(/^(\d{5})(\d)/,'$1-$2'); this.value=v;" maxlength="9" pattern="^\d{5}-\d{3}$" required />
           </div>
         </div>
       </fieldset>
@@ -242,11 +242,11 @@
           </div>
           <div class="col-3">
             <label>Data do batismo (dd/mm/aaaa)</label>
-            <input name="data_batismo" placeholder="__/__/____" />
+            <input name="data_batismo" placeholder="__/__/____" oninput="let v=this.value.replace(/\D/g,'').slice(0,8); if(v.length>=5) v=v.replace(/^(\d{2})(\d{2})(\d{1,4})/,'$1/$2/$3'); else if(v.length>=3) v=v.replace(/^(\d{2})(\d{1,2})/,'$1/$2'); this.value=v;" maxlength="10" pattern="^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/\d{4}$" />
           </div>
           <div class="col-3">
             <label>Celular *</label>
-            <input name="celular" placeholder="(11) 99999-9999" required />
+            <input name="celular" placeholder="(11) 99999-9999" oninput="let v=this.value.replace(/\D/g,'').slice(0,11); v=v.replace(/^(\d{2})(\d)/g,'($1) $2'); v=v.replace(/(\d)(\d{4})$/,'$1-$2'); this.value=v;" maxlength="15" inputmode="numeric" pattern="^\(\d{2}\)\s\d{4,5}-\d{4}$" required />
           </div>
 
           <div class="col-6">
@@ -275,7 +275,7 @@
           </div>
           <div class="col-4">
             <label>Data da oficialização (dd/mm/aaaa)</label>
-            <input name="data_oficializacao" placeholder="__/__/____" />
+            <input name="data_oficializacao" placeholder="__/__/____" oninput="let v=this.value.replace(/\D/g,'').slice(0,8); if(v.length>=5) v=v.replace(/^(\d{2})(\d{2})(\d{1,4})/,'$1/$2/$3'); else if(v.length>=3) v=v.replace(/^(\d{2})(\d{1,2})/,'$1/$2'); this.value=v;" maxlength="10" pattern="^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/\d{4}$" />
           </div>
 
           <div class="col-4">
@@ -301,7 +301,7 @@
           </div>
           <div class="col-4">
             <label>Data da formação</label>
-            <input name="formacao_data" placeholder="__/__/____" />
+            <input name="formacao_data" placeholder="__/__/____" oninput="let v=this.value.replace(/\D/g,'').slice(0,8); if(v.length>=5) v=v.replace(/^(\d{2})(\d{2})(\d{1,4})/,'$1/$2/$3'); else if(v.length>=3) v=v.replace(/^(\d{2})(\d{1,2})/,'$1/$2'); this.value=v;" maxlength="10" pattern="^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/\d{4}$" />
           </div>
 
           <div class="col-4">
@@ -312,7 +312,7 @@
           </div>
           <div class="col-4">
             <label>Se sim, desde quando?</label>
-            <input name="pedagogo_desde" placeholder="__/__/____" />
+            <input name="pedagogo_desde" placeholder="__/__/____" oninput="let v=this.value.replace(/\D/g,'').slice(0,8); if(v.length>=5) v=v.replace(/^(\d{2})(\d{2})(\d{1,4})/,'$1/$2/$3'); else if(v.length>=3) v=v.replace(/^(\d{2})(\d{1,2})/,'$1/$2'); this.value=v;" maxlength="10" pattern="^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/\d{4}$" />
           </div>
           <div class="col-4">
             <label>Se sim, atua na área?</label>

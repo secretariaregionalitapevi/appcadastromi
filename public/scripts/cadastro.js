@@ -6,25 +6,32 @@
   const cadastroTitulo = document.getElementById("cadastroTitulo");
   const cadastroSubtitulo = document.getElementById("cadastroSubtitulo");
   const cadastroPicker = document.getElementById("cadastroPicker");
-  const POLOS = [
-    "Altos de Caucaia",
-    "Central de Caucaia",
-    "Central VGP",
-    "Itapevi Central",
-    "Jardim Miranda",
-    "Miguel Mirizola",
-    "Morro Grande",
-    "Nova Itapevi",
-    "Pereiras",
-    "Rosemary",
-    "Sítio Tabuleiro",
-    "Vila Belizário",
-    "Vila Doutor Cardoso"
-  ].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+  let POLOS_OBJ = [];
+
+  async function fetchPolos() {
+    try {
+      const res = await fetch("/api/polos");
+      if (res.ok) {
+        const data = await res.json();
+        POLOS_OBJ = (Array.isArray(data) ? data : []).map(item => ({
+          nome: String(item.polo || item.nome || item.name || "").trim(),
+          cidade: String(item.cidade || item.municipio || item.localidade || "").trim()
+        })).filter(p => p.nome && p.cidade).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" }));
+        
+        const cidadeEl = document.querySelector('input[name="cidade"]');
+        if (cidadeEl) hydratePoloSelects(cidadeEl.value);
+        else hydratePoloSelects();
+      }
+    } catch (err) {
+      console.error("Erro ao buscar polos:", err);
+    }
+  }
+
+  fetchPolos();
   const poloParticipacaoSelect = document.querySelector('select[name="polo_participacao"]');
   const poloAuxilioSelect = document.querySelector('select[name="polo_auxilio"]');
 
-  function hydratePoloSelect(selectEl) {
+  function hydratePoloSelect(selectEl, cidadeFiltro) {
     if (!selectEl) return;
     const selectedValue = (selectEl.value || "").trim();
     selectEl.innerHTML = "";
@@ -34,22 +41,38 @@
     placeholderOption.textContent = "Selecione";
     selectEl.appendChild(placeholderOption);
 
-    POLOS.forEach((polo) => {
+    const filteredPolos = cidadeFiltro
+      ? POLOS_OBJ.filter(p => p.cidade === String(cidadeFiltro).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim())
+      : POLOS_OBJ;
+
+    filteredPolos.forEach((polo) => {
       const option = document.createElement("option");
-      option.value = polo;
-      option.textContent = polo;
+      option.value = polo.nome;
+      option.textContent = polo.nome;
       selectEl.appendChild(option);
     });
 
-    if (selectedValue && POLOS.includes(selectedValue)) {
+    if (selectedValue && filteredPolos.some(p => p.nome === selectedValue)) {
       selectEl.value = selectedValue;
     }
   }
 
-  function hydratePoloSelects() {
-    hydratePoloSelect(poloParticipacaoSelect);
-    hydratePoloSelect(poloAuxilioSelect);
+  function hydratePoloSelects(cidadeFiltro) {
+    hydratePoloSelect(poloParticipacaoSelect, cidadeFiltro);
+    hydratePoloSelect(poloAuxilioSelect, cidadeFiltro);
   }
+
+  document.addEventListener('input', function(e) {
+    if (e.target && e.target.name === 'cidade') {
+        hydratePoloSelects(e.target.value);
+    }
+  });
+
+  document.addEventListener('change', function(e) {
+    if (e.target && e.target.name === 'cidade') {
+        hydratePoloSelects(e.target.value);
+    }
+  });
 
   function show(tipo) {
     const isCrianca = tipo === "crianca";
@@ -98,6 +121,7 @@
       text: "Dados enviados com sucesso.",
       icon: "success",
       confirmButtonText: "OK",
+      confirmButtonColor: "#0f4f77",
       timer: 4000,
       timerProgressBar: true
     });
@@ -110,10 +134,11 @@
     }
 
     await window.Swal.fire({
-      title: "Erro ao enviar",
-      text: message,
+      title: "Ops...",
+      text: message || "Ocorreu um erro inesperado.",
       icon: "error",
-      confirmButtonText: "OK"
+      confirmButtonText: "Fechar",
+      confirmButtonColor: "#0f4f77"
     });
   }
 
@@ -169,6 +194,53 @@
     const { allowDuplicate = false } = options;
     btnEl.disabled = true;
     const payload = formToJSON(formEl);
+    
+    const isMonitor = formEl.id === "formMonitor";
+
+    if (!isMonitor) {
+      const nascimentoStr = payload["data_nascimento"] || payload["nascimento"] || "";
+      const parts = nascimentoStr.split('/');
+      if (parts.length === 3) {
+        const birthDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        const today = new Date();
+        let ageYears = today.getFullYear() - birthDate.getFullYear();
+        let ageMonths = today.getMonth() - birthDate.getMonth();
+        if (ageMonths < 0 || (ageMonths === 0 && today.getDate() < birthDate.getDate())) {
+          ageYears--;
+          ageMonths += 12;
+        }
+        
+        if (ageYears >= 12) {
+          if (window.Swal) {
+            await window.Swal.fire({
+              title: "Limite de idade excedido",
+              text: "Não pode ser registrada criança acima de 12 anos. O ministério deve ser consultado.",
+              icon: "warning",
+              confirmButtonText: "Entendi",
+              confirmButtonColor: "#0f4f77"
+            });
+          } else {
+            window.alert("Limite de idade excedido\\nNão pode ser registrada criança acima de 12 anos. O ministério deve ser consultado.");
+          }
+          btnEl.disabled = false;
+          return;
+        }
+      }
+    }
+
+    const celularKey = isMonitor ? "celular" : "celular_responsavel";
+    const celular = payload[celularKey] || "";
+    const celularDigits = celular.replace(/\\D/g, "");
+    
+    if (celularDigits.length === 10) {
+      const ddd = parseInt(celularDigits.substring(0, 2), 10);
+      if (ddd < 70) {
+        await showErrorModal("Para a sua região (DDD " + ddd + "), o 9º dígito no celular é obrigatório.");
+        btnEl.disabled = false;
+        return;
+      }
+    }
+
     const requestBody = allowDuplicate ? { ...payload, _allowDuplicate: true } : payload;
 
     try {
@@ -207,6 +279,40 @@
   }
 
   hydratePoloSelects();
+
+  const inputNascimentoCrianca = formCrianca.querySelector('input[name="data_nascimento"]');
+  if (inputNascimentoCrianca) {
+    inputNascimentoCrianca.addEventListener("input", async (e) => {
+      const v = e.target.value;
+      if (v.length === 10) {
+        const parts = v.split('/');
+        if (parts.length === 3) {
+          const birthDate = new Date(parts[2], parts[1] - 1, parts[0]);
+          const today = new Date();
+          let ageYears = today.getFullYear() - birthDate.getFullYear();
+          let ageMonths = today.getMonth() - birthDate.getMonth();
+          if (ageMonths < 0 || (ageMonths === 0 && today.getDate() < birthDate.getDate())) {
+            ageYears--;
+            ageMonths += 12;
+          }
+          if (ageYears >= 12) {
+            e.target.value = "";
+            if (window.Swal) {
+              await window.Swal.fire({
+                title: "Limite de idade excedido",
+                text: "Não pode ser registrada criança acima de 12 anos. O ministério deve ser consultado.",
+                icon: "warning",
+                confirmButtonText: "Entendi",
+                confirmButtonColor: "#0f4f77"
+              });
+            } else {
+              window.alert("Limite de idade excedido\\nNão pode ser registrada criança acima de 12 anos. O ministério deve ser consultado.");
+            }
+          }
+        }
+      }
+    });
+  }
 
   btnCrianca.addEventListener("click", () => show("crianca"));
   btnMonitor.addEventListener("click", () => show("monitor"));

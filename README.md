@@ -48,7 +48,7 @@ Acesse:
 Arquivo de exemplo: `.env.example`
 
 - `PORT` (padrão: `3000`)
-- `WEBHOOK_CRIANCA`
+- `WEBHOOK_CRIANCA` 
 - `WEBHOOK_MONITOR`
 - `WEBHOOK_CADASTRO` (fallback único para ambos)
 
