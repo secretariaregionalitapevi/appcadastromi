@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
   const fallbackCatalog = [];
   const fields = Array.from(document.querySelectorAll(".comum-field"));
   const modal = document.getElementById("comumModal");
@@ -171,6 +171,8 @@
   function select(item) {
     if (!currentField || !item) return;
     currentField.value = item.comum;
+    currentField.dataset.cidade = item.cidade;
+    currentField.dispatchEvent(new CustomEvent("comumSelecionada", { bubbles: true, detail: item }));
     currentField.dispatchEvent(new Event("input", { bubbles: true }));
     currentField.dispatchEvent(new Event("change", { bubbles: true }));
     updateRelatedCityField(currentField, item.cidade);

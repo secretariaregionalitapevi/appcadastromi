@@ -74,6 +74,18 @@
     }
   });
 
+  document.addEventListener('comumSelecionada', function(e) {
+    const item = e.detail;
+    if (item && item.cidade && e.target) {
+      const form = e.target.closest('form');
+      if (form && form.id === 'formMonitor') {
+        hydratePoloSelect(poloAuxilioSelect, item.cidade);
+      } else if (form && form.id === 'formCrianca') {
+        hydratePoloSelect(poloParticipacaoSelect, item.cidade);
+      }
+    }
+  });
+
   function show(tipo) {
     const isCrianca = tipo === "crianca";
     formCrianca.classList.toggle("hidden", !isCrianca);
