@@ -105,7 +105,7 @@ async function saveSubmission(tipo, payload) {
 /**
  * Salva os dados diretamente no Supabase usando a API REST (PostgREST)
  * @param {string} tipo - 'crianca' ou 'monitor'
- * @param {object} payload - Dados do formulÃ¡rio (jÃ¡ em CAIXA ALTA)
+ * @param {object} payload - Dados do formulario (ja em CAIXA ALTA)
  */
 async function saveToSupabase(tipo, payload) {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -115,7 +115,7 @@ async function saveToSupabase(tipo, payload) {
   const table = tipo === "monitor" ? SUPABASE_TABLE_MONITOR : SUPABASE_TABLE_CRIANCA;
   const url = `${SUPABASE_URL.replace(/\/$/, "")}/rest/v1/${table}`;
 
-  // Log para depuraÃ§Ã£o (visto nos logs do Vercel)
+  // Log para depuracao (visto nos logs do Vercel)
   console.log(`[Supabase] Gravando na tabela ${table}...`);
 
   const response = await fetch(url, {
@@ -124,7 +124,7 @@ async function saveToSupabase(tipo, payload) {
       "Content-Type": "application/json",
       "apikey": SUPABASE_SERVICE_ROLE_KEY,
       "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      "Prefer": "return=minimal" // Reduz overhead se nÃ£o precisamos do retorno
+      "Prefer": "return=minimal" // Reduz overhead se nao precisamos do retorno
     },
     body: JSON.stringify([payload]) // PostgREST prefere array para POST
   });
@@ -269,8 +269,8 @@ function buildDuplicateDetails(tipo, entry) {
   return {
     tipo,
     nome: String(nome || "").trim() || "Cadastro",
-    comum: String(comum || "").trim() || "Comum nÃ£o informada",
-    polo: String(polo || "").trim() || "Polo nÃ£o informado",
+    comum: String(comum || "").trim() || "Comum nao informada",
+    polo: String(polo || "").trim() || "Polo nao informado",
     date,
     time
   };
@@ -492,12 +492,12 @@ async function serveStatic(reqPath, res) {
   try {
     stat = await fsp.stat(filePath);
   } catch {
-    sendJson(res, 404, { error: "Arquivo nÃ£o encontrado." });
+    sendJson(res, 404, { error: "Arquivo nao encontrado." });
     return;
   }
 
   if (stat.isDirectory()) {
-    sendJson(res, 404, { error: "Arquivo nÃ£o encontrado." });
+    sendJson(res, 404, { error: "Arquivo nao encontrado." });
     return;
   }
 
@@ -518,6 +518,7 @@ function routeToPage(pathname) {
   if (pathname === "/cadastro") return "cadastro.html";
   if (pathname === "/cadastro/crianca") return "cadastro.html";
   if (pathname === "/cadastro/monitor") return "cadastro.html";
+  if (pathname === "/privacidade.html" || pathname === "/privacidade") return "privacidade.html";
   return null;
 }
 
@@ -543,7 +544,7 @@ async function handleRequest(req, res) {
         const supabaseUrl = process.env.SUPABASE_URL;
         const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
         if (!supabaseUrl || !supabaseKey) {
-          return sendJson(res, 500, { error: "ConfiguraÃ§Ã£o do Supabase ausente." });
+          return sendJson(res, 500, { error: "Configuracao do Supabase ausente." });
         }
 
         const normalizeValue = (value) => String(value || "").trim();
@@ -576,7 +577,7 @@ async function handleRequest(req, res) {
         const supabaseUrl = process.env.SUPABASE_URL;
         const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
         if (!supabaseUrl || !supabaseKey) {
-          return sendJson(res, 500, { error: "ConfiguraÃ§Ã£o do Supabase ausente." });
+          return sendJson(res, 500, { error: "Configuracao do Supabase ausente." });
         }
 
         const normalizeValue = (value) => String(value || "").trim();
@@ -605,7 +606,7 @@ async function handleRequest(req, res) {
         }
       }
 
-      sendJson(res, 404, { error: "Rota nÃ£o encontrada." });
+      sendJson(res, 404, { error: "Rota nao encontrada." });
       return;
     }
 
@@ -616,7 +617,7 @@ async function handleRequest(req, res) {
       const missing = validateRequired(tipo, payload);
 
       if (missing.length > 0) {
-        sendJson(res, 400, { error: "Campos obrigatÃ³rios ausentes.", missing });
+        sendJson(res, 400, { error: "Campos obrigatorios ausentes.", missing });
         return;
       }
 
@@ -635,11 +636,11 @@ async function handleRequest(req, res) {
 
       const saved = await saveSubmission(tipo, payload);
       
-      // PERSISTÃŠNCIA DIRETA NO SUPABASE
+      // PERSISTENCIA DIRETA NO SUPABASE
       // Conforme solicitado, removemos a rota de envio (webhook/Google Sheets)
       // e passamos a gravar diretamente no banco de dados Supabase.
       
-      // Limpeza de campos: remove campos que nÃ£o existem na tabela de crianÃ§as
+      // Limpeza de campos: remove campos que nao existem na tabela de criancas
       if (tipo === "crianca") {
         delete payload.de_acordo_voluntario;
         delete payload.autoriza_tratamento_dados;
@@ -655,7 +656,7 @@ async function handleRequest(req, res) {
           stack: error.stack
         });
         
-        // Se falhar no Supabase, retornamos 502 (Bad Gateway) para indicar falha na integraÃ§Ã£o
+        // Se falhar no Supabase, retornamos 502 (Bad Gateway) para indicar falha na integracao
         sendJson(res, 502, { 
           error: "Falha ao persistir dados no banco de dados.",
           details: error.message 
@@ -674,7 +675,7 @@ async function handleRequest(req, res) {
       return;
     }
 
-    sendJson(res, 404, { error: "Rota nÃ£o encontrada." });
+    sendJson(res, 404, { error: "Rota nao encontrada." });
   } catch (error) {
     if (error.message === "payload_too_large") {
       sendJson(res, 413, { error: "Payload excede 1MB." });
@@ -687,12 +688,12 @@ async function handleRequest(req, res) {
     }
 
     if (error.message === "supabase_duplicate_check_not_configured") {
-      sendJson(res, 500, { error: "ValidaÃ§Ã£o de duplicidade exige SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY." });
+      sendJson(res, 500, { error: "Validacao de duplicidade exige SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY." });
       return;
     }
 
     if (error instanceof SyntaxError) {
-      sendJson(res, 400, { error: "JSON invÃ¡lido." });
+      sendJson(res, 400, { error: "JSON invalido." });
       return;
     }
 

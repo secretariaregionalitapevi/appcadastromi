@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --bg: #eef2f7;
   --panel: #ffffff;
   --line: #d7dce3;
@@ -20,7 +20,7 @@ body {
 }
 
 .auth-wrap {
-  min-height: 100vh;
+  min-height: calc(100vh - 72px);
   display: grid;
   place-items: center;
   padding: 24px;
@@ -155,7 +155,7 @@ body {
 
 .selector-panel .panel-footer {
   font-size: 12px;
-  padding: 14px 10px;
+  padding: 10px 10px;
   color: #667382;
   background: #f1f4f8;
 }
@@ -348,6 +348,46 @@ textarea:focus {
   color: var(--muted);
 }
 
+
+.consent-row {
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+}
+
+.lgpd-consent {
+  margin-top: 4px;
+  margin-bottom: 14px;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.consent-row label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  color: #1f2d3d;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.consent-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  margin-top: 1px;
+  accent-color: #0e4e77;
+}
+
+.lgpd-consent a {
+  color: #0e4e77;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .actions {
   display: flex;
   gap: 10px;
