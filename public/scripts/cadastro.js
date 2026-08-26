@@ -292,6 +292,32 @@
 
   hydratePoloSelects();
 
+  function formatFieldAsDate(input) {
+    if (!input) return;
+    input.addEventListener("input", (e) => {
+      const isDelete = e.inputType && e.inputType.startsWith('delete');
+      let val = e.target.value;
+      if (isDelete) return;
+
+      let digits = val.replace(/\D/g, "").slice(0, 8);
+      if (digits.length > 4) {
+        e.target.value = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+      } else if (digits.length > 2) {
+        e.target.value = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+      } else {
+        e.target.value = digits;
+      }
+    });
+    input.addEventListener("blur", (e) => {
+      let digits = e.target.value.replace(/\D/g, "").slice(0, 8);
+      if (digits.length === 8) {
+        e.target.value = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+      }
+    });
+  }
+
+  document.querySelectorAll('input[name="data_nascimento"], input[name="data_batismo"]').forEach(formatFieldAsDate);
+
   const inputNascimentoCrianca = formCrianca.querySelector('input[name="data_nascimento"]');
   if (inputNascimentoCrianca) {
     inputNascimentoCrianca.addEventListener("input", async (e) => {
@@ -318,7 +344,7 @@
                 confirmButtonColor: "#0f4f77"
               });
             } else {
-              window.alert("Limite de idade excedido\\nNão pode ser registrada criança acima de 12 anos. O ministério deve ser consultado.");
+              window.alert("Limite de idade excedido\nNão pode ser registrada criança acima de 12 anos. O ministério deve ser consultado.");
             }
           }
         }

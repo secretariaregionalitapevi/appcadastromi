@@ -67,7 +67,7 @@
           </div>
           <div class="col-3">
             <label>Nascimento (dd/mm/aaaa) *</label>
-            <input name="data_nascimento" placeholder="ex.: 12/03/2018" required />
+            <input name="data_nascimento" placeholder="dd/mm/aaaa" maxlength="10" inputmode="numeric" required />
           </div>
           <div class="col-6">
             <label>Comum congregação *</label>
@@ -163,24 +163,24 @@
         <legend>Endereço</legend>
         <div class="grid">
           <div class="col-6">
-            <label>Rua / Número *</label>
-            <input name="logradouro_numero" required />
+            <label>Rua / Número</label>
+            <input name="logradouro_numero" />
           </div>
           <div class="col-6">
             <label>Complemento</label>
             <input name="complemento" />
           </div>
           <div class="col-4">
-            <label>Bairro *</label>
-            <input name="bairro" required />
+            <label>Bairro</label>
+            <input name="bairro" />
           </div>
           <div class="col-4">
-            <label>Cidade *</label>
-            <input name="cidade" required />
+            <label>Cidade</label>
+            <input name="cidade" />
           </div>
           <div class="col-4">
-            <label>CEP *</label>
-            <input name="cep" placeholder="00000-000" required />
+            <label>CEP</label>
+            <input name="cep" placeholder="00000-000" />
           </div>
         </div>
       </fieldset>
@@ -242,7 +242,7 @@
           </div>
           <div class="col-3">
             <label>Data do batismo (dd/mm/aaaa)</label>
-            <input name="data_batismo" placeholder="__/__/____" />
+            <input name="data_batismo" placeholder="dd/mm/aaaa" maxlength="10" inputmode="numeric" />
           </div>
           <div class="col-3">
             <label>Celular *</label>
