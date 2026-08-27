@@ -65,10 +65,14 @@ create table if not exists public.musicalizacao_monitores (
   constraint chk_musicalizacao_monitores_tipo check (tipo = 'monitor')
 );
 
--- Unicidade global (sem considerar dia): tipo + nome + comum
+-- A identidade da criança não pode depender de responsável, telefone ou
+-- endereço, pois esses dados são naturalmente compartilhados por irmãos.
+-- Incluímos a data de nascimento para permitir homônimos legítimos na comum.
+drop index if exists public.ux_musicalizacao_criancas_unico;
 create unique index if not exists ux_musicalizacao_criancas_unico
   on public.musicalizacao_criancas (
     upper(trim(nome_crianca)),
+    trim(data_nascimento),
     upper(trim(comum_congregacao))
   );
 

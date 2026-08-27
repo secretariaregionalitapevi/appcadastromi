@@ -373,29 +373,20 @@ function detectDuplicate(tipo, payload, entries) {
     }
 
     if (tipo === "crianca") {
-      const childNameMatch = namesLookSame(payload.nome_crianca, existing.nome_crianca);
-      const fatherNameMatch = namesLookSame(payload.nome_pai, existing.nome_pai);
-      const motherNameMatch = namesLookSame(payload.nome_mae, existing.nome_mae);
-      const guardianNameMatch = namesLookSame(payload.nome_responsavel, existing.nome_responsavel);
+      // Responsável, telefone e endereço pertencem à família e, portanto, podem
+      // ser iguais em cadastros legítimos de irmãos. A identidade da criança é
+      // determinada somente pelos dados próprios dela.
+      const childName = normalizeText(payload.nome_crianca);
+      const existingChildName = normalizeText(existing.nome_crianca);
+      const sameChildName = childName && existingChildName && childName === existingChildName;
       const birthDate = normalizeDate(payload.data_nascimento);
       const existingBirthDate = normalizeDate(existing.data_nascimento);
-      const phone = onlyDigits(payload.celular_responsavel);
-      const existingPhone = onlyDigits(existing.celular_responsavel);
 
       const sameCongregation = congregation && congregation === existingCongregation;
-      const samePhone = phone && existingPhone && phone === existingPhone;
       const sameBirthDate = birthDate && existingBirthDate && birthDate === existingBirthDate;
 
-      if (samePhone && sameCongregation && (childNameMatch || guardianNameMatch || fatherNameMatch || motherNameMatch)) {
-        return { duplicate: true, matchedId: entry.id, reason: "telefone_comum_nome", matchedEntry: entry };
-      }
-
-      if (sameBirthDate && sameCongregation && (childNameMatch || (fatherNameMatch && motherNameMatch))) {
-        return { duplicate: true, matchedId: entry.id, reason: "nascimento_comum_nome", matchedEntry: entry };
-      }
-
-      if (sameCongregation && childNameMatch && guardianNameMatch) {
-        return { duplicate: true, matchedId: entry.id, reason: "nome_crianca_responsavel", matchedEntry: entry };
+      if (sameChildName && sameBirthDate && sameCongregation) {
+        return { duplicate: true, matchedId: entry.id, reason: "identidade_crianca", matchedEntry: entry };
       }
     }
   }
@@ -713,5 +704,4 @@ if (process.env.VERCEL) {
     console.log(`Servidor iniciado em http://localhost:${PORT}`);
   });
 }
-
 
