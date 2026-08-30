@@ -318,6 +318,28 @@
 
   document.querySelectorAll('input[name="data_nascimento"], input[name="data_batismo"]').forEach(formatFieldAsDate);
 
+  function formatCellphone(value) {
+    const digits = String(value || "").replace(/\D/g, "").slice(0, 11);
+    if (!digits) return "";
+    if (digits.length <= 2) return "(" + digits;
+
+    const ddd = digits.slice(0, 2);
+    const number = digits.slice(2);
+    if (number.length <= 1) return "(" + ddd + ") " + number;
+    if (number.length <= 5) return "(" + ddd + ") " + number.slice(0, 1) + " " + number.slice(1);
+    return "(" + ddd + ") " + number.slice(0, 1) + " " + number.slice(1, 5) + "-" + number.slice(5);
+  }
+
+  function applyCellphoneMask(input) {
+    input.addEventListener("input", () => {
+      input.value = formatCellphone(input.value);
+    });
+  }
+
+  document
+    .querySelectorAll('input[name="celular"], input[name="celular_responsavel"]')
+    .forEach(applyCellphoneMask);
+
   const inputNascimentoCrianca = formCrianca.querySelector('input[name="data_nascimento"]');
   if (inputNascimentoCrianca) {
     inputNascimentoCrianca.addEventListener("input", async (e) => {

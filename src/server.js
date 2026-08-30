@@ -176,9 +176,6 @@ function normalizeText(value) {
     .trim();
 }
 
-function onlyDigits(value) {
-  return String(value || "").replace(/\D/g, "");
-}
 
 function isEmailFieldName(fieldName) {
   if (!fieldName) return false;
@@ -214,36 +211,6 @@ function normalizeDate(value) {
   return normalizeText(raw);
 }
 
-function nameTokens(value) {
-  const stopWords = new Set(["de", "da", "do", "dos", "das", "e"]);
-  return new Set(
-    normalizeText(value)
-      .split(" ")
-      .filter((token) => token && !stopWords.has(token))
-  );
-}
-
-function tokenSimilarity(a, b) {
-  const tokensA = nameTokens(a);
-  const tokensB = nameTokens(b);
-  if (tokensA.size === 0 || tokensB.size === 0) return 0;
-
-  let intersection = 0;
-  for (const token of tokensA) {
-    if (tokensB.has(token)) intersection += 1;
-  }
-
-  return intersection / Math.max(tokensA.size, tokensB.size);
-}
-
-function namesLookSame(a, b) {
-  const normalizedA = normalizeText(a);
-  const normalizedB = normalizeText(b);
-  if (!normalizedA || !normalizedB) return false;
-  if (normalizedA === normalizedB) return true;
-  if (normalizedA.includes(normalizedB) || normalizedB.includes(normalizedA)) return true;
-  return tokenSimilarity(normalizedA, normalizedB) >= 0.6;
-}
 
 function formatDateTimeBR(value) {
   const dateObj = value ? new Date(value) : null;
@@ -355,18 +322,17 @@ function detectDuplicate(tipo, payload, entries) {
     if (tipo === "monitor") {
       const email = normalizeText(payload.email);
       const existingEmail = normalizeText(existing.email);
-      const phone = onlyDigits(payload.celular);
-      const existingPhone = onlyDigits(existing.celular);
-      const sameName = namesLookSame(payload.nome_completo, existing.nome_completo);
+      const monitorName = normalizeText(payload.nome_completo);
+      const existingMonitorName = normalizeText(existing.nome_completo);
+      const sameName = monitorName && existingMonitorName && monitorName === existingMonitorName;
 
       if (email && existingEmail && email === existingEmail) {
         return { duplicate: true, matchedId: entry.id, reason: "email", matchedEntry: entry };
       }
 
-      if (phone && existingPhone && phone === existingPhone) {
-        return { duplicate: true, matchedId: entry.id, reason: "celular", matchedEntry: entry };
-      }
-
+      // Celular e sobrenomes podem ser compartilhados por pessoas da mesma
+      // familia. Somente o nome completo exato, na mesma comum, identifica o
+      // mesmo monitor; similaridade parcial gerava falsos positivos entre irmaos.
       if (sameName && congregation && congregation === existingCongregation) {
         return { duplicate: true, matchedId: entry.id, reason: "nome_e_comum", matchedEntry: entry };
       }
@@ -695,7 +661,7 @@ async function handleRequest(req, res) {
 
 if (process.env.VERCEL) {
   module.exports = handleRequest;
-} else {
+} else if (require.main === module) {
   const server = http.createServer((req, res) => {
     handleRequest(req, res);
   });
@@ -704,4 +670,6 @@ if (process.env.VERCEL) {
     console.log(`Servidor iniciado em http://localhost:${PORT}`);
   });
 }
-
+// Exportacao restrita para testes automatizados; na Vercel o handler continua
+// sendo a exportacao principal esperada pela plataforma.
+module.exports.detectDuplicate = detectDuplicate;
